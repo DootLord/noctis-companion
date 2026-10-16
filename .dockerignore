@@ -1,6 +1,7 @@
 node_modules
 npm-debug.log
-.env
 .git
 .gitignore
-README.local.md
+.env
+*.zip
+scripts_build_spells.py

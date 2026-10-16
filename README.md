@@ -1,158 +1,136 @@
-# Quick Coolify deploy
+# Noctis Companion — Coolify deploy
+
+A private, Dockerised play UI for Noctis' existing Google Sheets character sheet.
+
+The **Google Sheet remains the canonical DM-readable character sheet**. The web app is a quality-of-life wrapper for play: spell preparation, spell-slot tracking, casting, rests, spellbook management, and inventory.
+
+## Quick deploy
 
 1. Put this folder in a Git repository.
-2. In Coolify choose **New Resource → Application → Public/Private Git Repository**.
-3. Coolify will detect the included `Dockerfile`.
-4. Set container port to **3000**.
+2. In Coolify create an Application from the repository.
+3. Build pack: **Dockerfile**.
+4. Internal/container port: **3000**.
 5. Add the environment variables from `.env.example`.
-6. Share the Google Sheet with the service-account email as **Editor**.
+6. Share the character Google Sheet with the service-account email as **Editor**.
 7. Deploy and attach your domain.
 
-No database, Redis, volume, or extra service is required. Character state is written to the existing Google Sheet.
+Health endpoint:
 
----
-
-# Noctis — Necromancer's Grimoire
-
-A small web companion for Shaun's existing Google Sheets D&D character sheet.
-
-## What it does
-
-- Reads core character information from the existing Google Sheet.
-- Keeps the Google Sheet as the source of truth.
-- Adds an `APP_DATA` tab to the *same spreadsheet* for companion-only state.
-- Browse 2014 SRD Wizard spells.
-- Add spells to your spellbook.
-- Prepare/unprepare spells live during play.
-- Enforces the Wizard prepared-spell limit.
-- Shows spell slots and key level-up milestones.
-- Works as a small mobile-friendly website.
-- Designed to run in Docker / Coolify.
-
-The existing `MAIN`, `INFO`, `SPELLS`, `BAG`, etc. tabs are not overwritten.
-
-## Why `APP_DATA`?
-
-The original `SPELLS` tab is a heavily formatted visual sheet. Writing directly into it would make the app brittle and risks damaging formulas/layout.
-
-Instead, the app creates a tiny `APP_DATA` tab in the same spreadsheet:
-
-| type | key | value |
-| --- | --- | --- |
-| known | magic-missile | 1 |
-| prepared | shield | 1 |
-
-Your DM still has access because it is inside the same shared character spreadsheet.
-
-A later version can mirror the chosen/prepared spells into the visual `SPELLS` tab once its exact card/cell mapping is locked down.
-
-## Google setup
-
-The ChatGPT Google Drive connection is **not** used by your deployed Coolify container. The hosted app needs its own Google API credential.
-
-1. Open Google Cloud Console.
-2. Create/select a project.
-3. Enable **Google Sheets API**.
-4. Create a **Service Account**.
-5. Create/download a JSON key for that service account.
-6. Copy the service account email, e.g.:
-   `noctis-sheet@your-project.iam.gserviceaccount.com`
-7. Share the character Google Sheet with that address as **Editor**.
-8. Base64 encode the JSON key.
-
-Linux/macOS:
-```bash
-base64 -w 0 service-account.json
+```text
+/health
 ```
 
+A successful response is:
+
+```json
+{"ok":true,"service":"noctis-companion"}
+```
+
+## What this version does
+
+### Gameplay
+
+- Shows Noctis' prepared spells and known cantrips as expanded cards — no need to click a spell just to remember what it does.
+- Shows casting time, range, duration, components, save/attack information, concentration/ritual status, and a readable effect summary.
+- **Cast** button automatically spends the chosen spell-slot level.
+- Shows casts-per-spell since the last long rest.
+- After casting, produces a prominent "Tell the table" summary.
+- Displays spell slots as a shared pool by level.
+
+> 5e Wizards do not allocate spell slots to individual spells. Prepared spells can use any suitable shared slot. The UI therefore tracks slot use by level and cast history by spell.
+
+### Rests
+
+- **Long Rest** restores all spell slots, resets cast counters, and refreshes Arcane Recovery.
+- **Short Rest** supports Wizard **Arcane Recovery**, enforcing the 2014 combined-slot-level limit and once-per-long-rest use.
+
+### Google Sheet sync
+
+`APP_DATA` stores machine state, but it is no longer the only place changes go.
+
+- `SPELLS` is kept as the compact DM/gameplay spell sheet:
+  - known spell names
+  - prepared marker
+  - concentration marker
+  - ritual marker
+  - V/S/M component markers
+  - spell-slot totals and spent-slot circles
+- `SpellBook` is kept as the human-readable full spellbook:
+  - quick spell index grouped by level
+  - detailed cards with name, level, school, ritual status, casting time, components, range, duration and effect summary
+- A **Rebuild DM spell sheets** button in Settings can force a complete resync.
+
+The app preserves the existing formatting and writes into the cells already designed for these fields.
+
+### Inventory
+
+The Inventory tab reads/writes the existing `BAG` sheet.
+
+- quantity
+- item name
+- cost (for example `5 gp`)
+- weight per item
+- CP / SP / EP / GP / PP
+
+It uses the BAG sheet's existing rows, so its existing wealth and weight formulas continue to work.
+
+### Spell data
+
+`data/wizard-spells-2014.json` contains the **216 Wizard spells listed in the supplied 2014 Player's Handbook**, structured locally for the companion. It is bundled into the Docker image, so the live app does not need an external spell API.
+
+The data was extracted from the handbook supplied for this private character tool. The UI favours concise card summaries for readability; full source text is available in the local records for the detail view.
+
+## Environment variables
+
+```env
+PORT=3000
+SPREADSHEET_ID=1I9oKFOEonJ-oUuzO1Fewm3bNMapB1DyDb8f4J74vRsU
+GOOGLE_SERVICE_ACCOUNT_B64=<base64 encoded service-account JSON>
+APP_PASSWORD=<password for the web UI>
+SESSION_SECRET=<long random value>
+DND_RULESET=2014
+```
+
+## Google Sheets service account
+
+The deployed Coolify container cannot reuse ChatGPT's Google Drive connection. With the current build it authenticates directly to Google Sheets using a service account.
+
+1. Enable Google Sheets API in a Google Cloud project.
+2. Create a service account and JSON key.
+3. Share the character sheet with the service-account email as Editor.
+4. Base64 encode the JSON file and use it as `GOOGLE_SERVICE_ACCOUNT_B64`.
+
 PowerShell:
+
 ```powershell
 [Convert]::ToBase64String([IO.File]::ReadAllBytes("service-account.json"))
 ```
 
-Put the resulting value into `GOOGLE_SERVICE_ACCOUNT_B64`.
-
-## Coolify
-
-Create a new application using this repository / uploaded source.
-
-### Build
-
-Coolify should detect the `Dockerfile`.
-
-Port:
-```text
-3000
-```
-
-### Environment variables
-
-```env
-SPREADSHEET_ID=1I9oKFOEonJ-oUuzO1Fewm3bNMapB1DyDb8f4J74vRsU
-GOOGLE_SERVICE_ACCOUNT_B64=<base64 JSON>
-APP_PASSWORD=<a password for the web UI>
-SESSION_SECRET=<long random string>
-DND_RULESET=2014
-PORT=3000
-```
-
-Then attach a Coolify domain such as:
-
-```text
-noctis.example.com
-```
-
-Coolify handles HTTPS/reverse proxying.
-
-## Local test
+Linux:
 
 ```bash
-cp .env.example .env
-# fill in values
-docker build -t noctis-companion .
-docker run --rm --env-file .env -p 3000:3000 noctis-companion
+base64 -w 0 service-account.json
 ```
 
-Open:
+## Current Noctis assumptions
 
-```text
-http://localhost:3000
-```
+The companion reads these directly from the existing sheet (with optional overrides in Settings):
 
-## Current character assumptions
+- Level: `MAIN!AC2`
+- Intelligence: `MAIN!B20`
 
-Current sheet data indicates:
+For the current Wizard 3 / INT 17 character this gives:
 
-- Noctis
-- Tiefling
-- Wizard 3
-- School of Necromancy
-- INT 17 (+3)
 - Spell save DC 13
 - Spell attack +5
-- 21 max HP
-
-At Wizard level 3 / INT +3:
-
-- 6 prepared levelled Wizard spells
+- 6 prepared levelled spells
 - 3 cantrips known
-- 4 first-level spell slots
-- 2 second-level spell slots
-- minimum 10 levelled spells in the spellbook from normal Wizard advancement
+- 4 first-level slots
+- 2 second-level slots
+- Arcane Recovery budget: 2 combined slot levels
 
-## Spell source
+## First deploy after upgrading from the old version
 
-The application uses the open D&D 5e SRD API for 2014 Wizard spells and descriptions.
+The older build only wrote known/prepared state into `APP_DATA`. After deploying this version, open **Settings → Rebuild DM spell sheets** once. That projects the existing state into `SPELLS` and `SpellBook` immediately.
 
-Non-SRD spells are intentionally not bundled. A future update can add a "custom spell" editor where you enter spell details from material you own.
-
-## Good next improvements
-
-- Inventory / consumables view backed by the same `APP_DATA` tab.
-- HP and spell-slot trackers.
-- Short/long-rest buttons.
-- Familiar / summoned-undead cards.
-- Explicit Necromancy school filter and recommended spell picker.
-- Mirror chosen spells back into the visual `SPELLS` tab.
-- DM read-only mode with a second password.
-- PWA support so it installs like an app on a phone.
+After that, learning/preparing/removing spells, casting spells, and resting sync the relevant sheet cells automatically.

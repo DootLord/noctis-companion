@@ -1,7 +1,5 @@
-# Spell data
+# Local spell data
 
-`wizard-spells-2014.json` is the local spell database used by the app.
+`wizard-spells-2014.json` is the bundled Wizard spell catalogue used by Noctis Companion.
 
-If this file contains spell records, the server uses them first. If it is empty, the current build falls back to the public 2014 SRD API so the UI remains usable.
-
-The Player's Handbook import can populate this file in the same schema consumed by the frontend.
+It currently contains the 216 Wizard spells listed in the supplied 2014 Player's Handbook and is loaded locally by `server.js`. The deployed app does not require an external spell API.
