@@ -3,181 +3,245 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <meta name="theme-color" content="#0d0b10" />
+  <meta name="theme-color" content="#0a0910" />
+  <meta name="color-scheme" content="dark" />
   <title>Noctis — Necromancer's Grimoire</title>
-  <link rel="stylesheet" href="/styles.css" />
+  <link rel="stylesheet" href="/styles.css?v=3" />
 </head>
 <body>
+  <div class="ambient ambient-a"></div>
+  <div class="ambient ambient-b"></div>
+
   <div id="login" class="login hidden">
-    <form id="loginForm" class="panel login-card">
-      <div class="sigil">☠</div>
-      <h1>Noctis</h1>
-      <p class="muted">Open the grimoire.</p>
-      <input id="password" type="password" placeholder="Companion password" autocomplete="current-password" />
-      <button type="submit" class="primary">Enter</button>
-      <div id="loginError" class="error"></div>
+    <form id="loginForm" class="login-card glass-panel">
+      <div class="brand-mark brand-mark-large" aria-hidden="true">N</div>
+      <div>
+        <div class="eyebrow">NOCTIS COMPANION</div>
+        <h1>Open the Grimoire</h1>
+        <p class="muted login-copy">A private play surface for Noctis' spellbook, resources and inventory.</p>
+      </div>
+      <label class="field-label" for="password">Companion password</label>
+      <input id="password" type="password" placeholder="Enter password" autocomplete="current-password" />
+      <button type="submit" class="primary button-lg">Enter Grimoire</button>
+      <div id="loginError" class="error" role="alert"></div>
     </form>
   </div>
 
-  <div id="app" class="hidden">
+  <div id="app" class="hidden app-shell">
     <header class="app-header">
-      <div class="identity">
-        <div class="eyebrow">NECROMANCER'S GRIMOIRE</div>
-        <h1 id="charName">Noctis</h1>
-        <div id="subtitle" class="subtitle"></div>
-      </div>
-      <div class="header-right">
-        <div class="header-stats">
-          <div><strong id="dc">13</strong><span>Spell DC</span></div>
-          <div><strong id="atk">+5</strong><span>Spell Attack</span></div>
-          <div><strong id="prepCount">0 / 6</strong><span>Prepared</span></div>
+      <div class="header-inner">
+        <div class="identity-block">
+          <div class="brand-mark" aria-hidden="true">N</div>
+          <div class="identity-copy">
+            <div class="eyebrow">NECROMANCER'S GRIMOIRE</div>
+            <div class="identity-line">
+              <h1 id="charName">Noctis</h1>
+              <span class="status-dot" title="Google Sheet connected"></span>
+            </div>
+            <div id="subtitle" class="subtitle"></div>
+          </div>
         </div>
-        <div class="rest-actions">
-          <button id="shortRest" class="secondary">☕ Short Rest</button>
-          <button id="longRest" class="primary">☾ Long Rest</button>
+
+        <div class="header-tools">
+          <div class="header-stats" aria-label="Spellcasting statistics">
+            <div class="stat-card">
+              <span class="stat-icon">✦</span>
+              <div><strong id="dc">13</strong><span>Spell DC</span></div>
+            </div>
+            <div class="stat-card">
+              <span class="stat-icon">↗</span>
+              <div><strong id="atk">+5</strong><span>Spell Attack</span></div>
+            </div>
+            <div class="stat-card">
+              <span class="stat-icon">◈</span>
+              <div><strong id="prepCount">0 / 6</strong><span>Prepared</span></div>
+            </div>
+          </div>
+          <div class="rest-actions">
+            <button id="shortRest" class="secondary rest-button"><span>◐</span> Short Rest</button>
+            <button id="longRest" class="primary rest-button"><span>☾</span> Long Rest</button>
+          </div>
         </div>
       </div>
+
+      <nav class="tabs" aria-label="Companion sections">
+        <button class="tab active" data-tab="play"><span class="tab-icon">✦</span><span>Play</span></button>
+        <button class="tab" data-tab="spellbook"><span class="tab-icon">▤</span><span>Spellbook</span></button>
+        <button class="tab" data-tab="discover"><span class="tab-icon">＋</span><span>Learn Spells</span></button>
+        <button class="tab" data-tab="inventory"><span class="tab-icon">◇</span><span>Inventory</span></button>
+        <button class="tab" data-tab="levelup"><span class="tab-icon">↑</span><span>Level Up</span></button>
+        <button class="tab" data-tab="settings"><span class="tab-icon">⚙</span><span>Settings</span></button>
+      </nav>
     </header>
 
-    <nav class="tabs">
-      <button class="tab active" data-tab="play">Play</button>
-      <button class="tab" data-tab="spellbook">Spellbook</button>
-      <button class="tab" data-tab="discover">Learn Spells</button>
-      <button class="tab" data-tab="inventory">Inventory</button>
-      <button class="tab" data-tab="levelup">Level Up</button>
-      <button class="tab" data-tab="settings">Settings</button>
-    </nav>
-
-    <main>
+    <main class="content-shell">
       <section id="play" class="view active">
-        <div class="section-title">
+        <div class="page-heading">
           <div>
-            <div class="eyebrow">GAMEPLAY</div>
-            <h2>Spellcasting</h2>
+            <div class="eyebrow">LIVE GAMEPLAY</div>
+            <h2>Spellcasting Dashboard</h2>
+            <p class="page-lede">Everything you need to cast without digging through the sheet.</p>
           </div>
           <div id="arcaneRecoveryStatus" class="resource-pill"></div>
         </div>
 
-        <div class="panel slot-panel">
-          <div class="slot-panel-heading">
-            <div>
-              <h3>Spell Slots</h3>
-              <p class="muted compact">Slots are a shared pool — you don't allocate them to individual spells. Pick the slot level when you cast.</p>
+        <div class="resource-layout">
+          <div class="panel slot-panel feature-panel">
+            <div class="panel-heading">
+              <div>
+                <span class="panel-kicker">SHARED RESOURCE</span>
+                <h3>Spell Slots</h3>
+                <p class="muted compact">Choose a slot when casting. Filled pips are available; dim pips are spent.</p>
+              </div>
+              <div class="panel-glyph" aria-hidden="true">◉</div>
             </div>
+            <div id="slotDashboard" class="slot-dashboard"></div>
           </div>
-          <div id="slotDashboard" class="slot-dashboard"></div>
+
+          <aside class="panel rules-panel">
+            <div class="panel-heading compact-heading">
+              <div>
+                <span class="panel-kicker">QUICK RULE</span>
+                <h3>Wizard Casting</h3>
+              </div>
+            </div>
+            <div class="rule-list">
+              <div><span>1</span><p>Prepare levelled spells after a long rest.</p></div>
+              <div><span>2</span><p>Spend a slot when you cast a levelled spell.</p></div>
+              <div><span>3</span><p>Cantrips never consume spell slots.</p></div>
+            </div>
+          </aside>
         </div>
 
-        <div id="castResult" class="cast-result hidden"></div>
+        <div id="castResult" class="cast-result hidden" aria-live="polite"></div>
 
-        <div class="section-title subheading">
+        <div class="section-divider"></div>
+        <div class="page-heading page-heading-compact">
           <div>
             <div class="eyebrow">READY TO CAST</div>
-            <h2>Cantrips & Prepared Spells</h2>
+            <h2>Prepared Spells & Cantrips</h2>
+            <p class="page-lede">Rules, components and cast controls stay visible on every card.</p>
           </div>
         </div>
         <div id="preparedList" class="spell-grid gameplay-grid"></div>
       </section>
 
       <section id="spellbook" class="view">
-        <div class="section-title">
+        <div class="page-heading">
           <div>
             <div class="eyebrow">YOUR SPELLBOOK</div>
             <h2>Known Spells</h2>
+            <p class="page-lede">Prepare, review and manage what Noctis has actually learned.</p>
           </div>
-          <input id="bookSearch" class="search" placeholder="Search spellbook…" />
+          <div class="search-wrap"><span>⌕</span><input id="bookSearch" class="search" placeholder="Search spellbook…" /></div>
         </div>
-        <div id="bookStats" class="notice"></div>
+        <div id="bookStats" class="summary-strip"></div>
         <div id="bookList" class="spell-grid"></div>
       </section>
 
       <section id="discover" class="view">
-        <div class="section-title">
+        <div class="page-heading">
           <div>
             <div class="eyebrow">PLAYER'S HANDBOOK · 2014</div>
             <h2>Learn Spells</h2>
+            <p class="page-lede">Browse the Wizard list available at your current level.</p>
           </div>
-          <div class="filters">
-            <select id="levelFilter"></select>
-            <select id="schoolFilter"><option value="all">All schools</option></select>
-            <input id="spellSearch" class="search" placeholder="Search spells…" />
+          <div class="filters panel-inline">
+            <select id="levelFilter" aria-label="Spell level filter"></select>
+            <select id="schoolFilter" aria-label="Spell school filter"><option value="all">All schools</option></select>
+            <div class="search-wrap"><span>⌕</span><input id="spellSearch" class="search" placeholder="Search spells…" /></div>
           </div>
         </div>
-        <p class="muted">Only spells you can currently learn are shown by default. Adding a spell updates the app and the DM-readable Google Sheet.</p>
+        <div class="info-banner"><span>↔</span><p>Adding or removing a spell updates both the companion state and the DM-readable Google Sheet.</p></div>
         <div id="discoverList" class="spell-grid"></div>
       </section>
 
       <section id="inventory" class="view">
-        <div class="section-title">
+        <div class="page-heading">
           <div>
             <div class="eyebrow">BAG · GOOGLE SHEET</div>
             <h2>Inventory</h2>
+            <p class="page-lede">A lightweight editor for the same items your DM sees.</p>
           </div>
-          <button id="saveInventory" class="primary">Save to Sheet</button>
+          <button id="saveInventory" class="primary button-lg">Save Inventory</button>
         </div>
 
-        <div class="panel coins-panel">
-          <h3>Coins</h3>
-          <div class="coins-grid">
-            <label>CP<input id="coinCp" type="number" min="0" /></label>
-            <label>SP<input id="coinSp" type="number" min="0" /></label>
-            <label>EP<input id="coinEp" type="number" min="0" /></label>
-            <label>GP<input id="coinGp" type="number" min="0" /></label>
-            <label>PP<input id="coinPp" type="number" min="0" /></label>
+        <div class="inventory-layout">
+          <div class="panel coins-panel">
+            <div class="panel-heading compact-heading">
+              <div><span class="panel-kicker">CURRENCY</span><h3>Coins</h3></div>
+              <div class="panel-glyph">¤</div>
+            </div>
+            <div class="coins-grid">
+              <label><span>CP</span><input id="coinCp" type="number" min="0" /></label>
+              <label><span>SP</span><input id="coinSp" type="number" min="0" /></label>
+              <label><span>EP</span><input id="coinEp" type="number" min="0" /></label>
+              <label><span>GP</span><input id="coinGp" type="number" min="0" /></label>
+              <label><span>PP</span><input id="coinPp" type="number" min="0" /></label>
+            </div>
           </div>
-        </div>
 
-        <div class="panel inventory-panel">
-          <div class="inventory-header">
-            <span>Qty</span><span>Item</span><span>Cost</span><span>Weight</span><span></span>
+          <div class="panel inventory-panel">
+            <div class="panel-heading compact-heading inventory-title-row">
+              <div><span class="panel-kicker">EQUIPMENT</span><h3>Carried Items</h3></div>
+              <button id="addInventoryRow" class="secondary small">＋ Add Item</button>
+            </div>
+            <div class="inventory-table-wrap">
+              <div class="inventory-header">
+                <span>Qty</span><span>Item</span><span>Cost</span><span>Weight</span><span></span>
+              </div>
+              <div id="inventoryRows"></div>
+            </div>
+            <div class="table-help"><span>i</span><p>Cost can be written like <b>5 gp</b>; weight is per item. Existing sheet formulas continue to calculate totals.</p></div>
           </div>
-          <div id="inventoryRows"></div>
-          <button id="addInventoryRow" class="secondary add-row">+ Add item</button>
-          <p class="muted compact">Cost can be written like <b>5 gp</b>; weight is per item. The sheet's existing formulas continue to calculate total wealth and carried weight.</p>
         </div>
       </section>
 
       <section id="levelup" class="view">
-        <div class="section-title"><div><div class="eyebrow">PROGRESSION</div><h2>What Comes Next?</h2></div></div>
+        <div class="page-heading"><div><div class="eyebrow">PROGRESSION</div><h2>What Comes Next?</h2><p class="page-lede">The next milestones for Noctis' Wizard and Necromancer progression.</p></div></div>
         <div id="levelCards" class="level-grid"></div>
       </section>
 
       <section id="settings" class="view">
-        <div class="section-title"><div><div class="eyebrow">COMPANION SETTINGS</div><h2>Sheet Sync</h2></div></div>
-        <div class="panel settings-panel">
-          <label>Wizard Level<input id="levelSetting" type="number" min="1" max="20" /></label>
-          <label>Intelligence Score<input id="intSetting" type="number" min="1" max="30" /></label>
-          <p class="muted">Normally these are read from the character sheet. Use overrides only if you deliberately want the companion to differ.</p>
-          <div class="button-row">
-            <button id="saveSettings" class="primary">Save settings</button>
-            <button id="syncSheet" class="secondary">Rebuild DM spell sheets</button>
-            <button id="logout" class="secondary">Log out</button>
+        <div class="page-heading"><div><div class="eyebrow">COMPANION SETTINGS</div><h2>Sheet Sync</h2><p class="page-lede">Normally the sheet is authoritative. Overrides are here for troubleshooting and deliberate changes.</p></div></div>
+        <div class="settings-grid">
+          <div class="panel settings-panel">
+            <div class="panel-heading compact-heading"><div><span class="panel-kicker">CHARACTER OVERRIDES</span><h3>Wizard Stats</h3></div></div>
+            <div class="form-grid">
+              <label>Wizard Level<input id="levelSetting" type="number" min="1" max="20" /></label>
+              <label>Intelligence Score<input id="intSetting" type="number" min="1" max="30" /></label>
+            </div>
+            <p class="muted compact">These values affect prepared-spell limits, slot progression and spellcasting stats inside the companion.</p>
+            <div class="button-row"><button id="saveSettings" class="primary">Save Overrides</button></div>
+          </div>
+          <div class="panel settings-panel">
+            <div class="panel-heading compact-heading"><div><span class="panel-kicker">MAINTENANCE</span><h3>Google Sheet</h3></div></div>
+            <p class="muted compact">Rebuild the DM-facing SPELLS and SpellBook tabs from the companion's current known/prepared state.</p>
+            <div class="button-row"><button id="syncSheet" class="secondary">Rebuild DM Spell Sheets</button><button id="logout" class="ghost-danger">Log out</button></div>
           </div>
         </div>
       </section>
     </main>
   </div>
 
-  <dialog id="spellDialog">
-    <button id="closeDialog" class="dialog-close">×</button>
+  <dialog id="spellDialog" class="modal-card">
+    <button id="closeDialog" class="dialog-close" aria-label="Close">×</button>
     <div id="spellDetail"></div>
   </dialog>
 
-  <dialog id="shortRestDialog">
-    <button id="closeShortRest" class="dialog-close">×</button>
+  <dialog id="shortRestDialog" class="modal-card compact-modal">
+    <button id="closeShortRest" class="dialog-close" aria-label="Close">×</button>
     <div class="eyebrow">SHORT REST</div>
     <h2>Arcane Recovery</h2>
     <p id="arcaneRecoveryHelp" class="muted"></p>
-    <label class="dialog-label">Recover spell slots
-      <select id="recoveryChoice"></select>
-    </label>
+    <label class="dialog-label">Recover spell slots<select id="recoveryChoice"></select></label>
     <div class="button-row dialog-buttons">
       <button id="confirmShortRest" class="primary">Take Short Rest</button>
-      <button id="shortRestNoRecovery" class="secondary">Rest without recovery</button>
+      <button id="shortRestNoRecovery" class="secondary">Rest Without Recovery</button>
     </div>
   </dialog>
 
-  <div id="toast" class="toast"></div>
-  <script src="/app.js"></script>
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+  <script src="/app.js?v=3" defer></script>
 </body>
 </html>

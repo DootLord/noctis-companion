@@ -592,8 +592,24 @@ app.put("/api/inventory", requireAuth, async (req, res) => {
   }
 });
 
-app.use(express.static(path.join(__dirname, "public")));
-app.get("/{*splat}", (_req, res) => res.sendFile(path.join(__dirname, "public", "index.html")));
+// Front-end assets intentionally use no-store. Coolify rolling deploys can otherwise
+// leave a browser with old HTML and new JavaScript (or vice versa), which causes
+// missing-element startup errors after an update. The app is small, so freshness is
+// more valuable than asset caching here.
+app.use(express.static(path.join(__dirname, "public"), {
+  etag: false,
+  lastModified: false,
+  maxAge: 0,
+  setHeaders(res) {
+    res.setHeader("Cache-Control", "no-store, no-cache, must-revalidate, proxy-revalidate");
+    res.setHeader("Pragma", "no-cache");
+    res.setHeader("Expires", "0");
+  }
+}));
+app.get("/{*splat}", (_req, res) => {
+  res.setHeader("Cache-Control", "no-store, no-cache, must-revalidate, proxy-revalidate");
+  res.sendFile(path.join(__dirname, "public", "index.html"));
+});
 
 const server = app.listen(PORT, "0.0.0.0", () => console.log(`Noctis Companion listening on 0.0.0.0:${PORT}`));
 server.on("error", err => { console.error("Failed to start HTTP server:", err); process.exit(1); });

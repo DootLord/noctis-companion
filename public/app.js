@@ -1,5 +1,31 @@
+const UI_VERSION = "3.0.0";
 const $ = q => document.querySelector(q);
 const $$ = q => [...document.querySelectorAll(q)];
+
+const REQUIRED_UI = [
+  "#login", "#loginForm", "#app", "#charName", "#subtitle", "#dc", "#atk", "#prepCount",
+  "#slotDashboard", "#preparedList", "#bookList", "#discoverList", "#inventoryRows", "#levelCards",
+  "#levelFilter", "#schoolFilter", "#bookSearch", "#spellSearch", "#castResult", "#toast"
+];
+
+function verifyUiVersion() {
+  const missing = REQUIRED_UI.filter(selector => !$(selector));
+  if (!missing.length) {
+    sessionStorage.removeItem("noctis-ui-refresh");
+    return true;
+  }
+
+  // A Coolify rolling deploy can briefly pair cached HTML with a newer JS bundle.
+  // Reload once; server.js now sends no-store headers so the second request gets
+  // a matched HTML/CSS/JS set.
+  if (!sessionStorage.getItem("noctis-ui-refresh")) {
+    sessionStorage.setItem("noctis-ui-refresh", UI_VERSION);
+    location.reload();
+    return false;
+  }
+
+  throw new Error(`Interface files are out of sync (missing ${missing.join(", ")}). Redeploy v${UI_VERSION} and hard-refresh once.`);
+}
 
 let model = null;
 let catalogue = [];
@@ -131,7 +157,8 @@ function spellCard(spell, mode) {
     actions += `<button class="danger-button" data-action="forget" data-index="${spell.index}">Remove</button>`;
   }
 
-  return `<article class="spell-card ${prepared ? "prepared" : ""} ${schoolName(spell).toLowerCase() === "necromancy" ? "necromancy" : ""}">
+  const schoolKey = schoolName(spell).toLowerCase().replace(/[^a-z]+/g, "-");
+  return `<article class="spell-card ${prepared ? "prepared" : ""}" data-school="${escapeHtml(schoolKey)}">
     <div class="spell-heading">
       <div>
         <div class="spell-kicker">${escapeHtml(schoolName(spell))}</div>
@@ -201,7 +228,7 @@ function renderSlots() {
     const used = Number(model.state.slotsUsed?.[level] || 0);
     const remain = Math.max(0, max - used);
     const orbs = Array.from({length:max}, (_,n) => `<span class="slot-orb ${n < used ? "spent" : "available"}" title="${n < used ? "Spent" : "Available"}"></span>`).join("");
-    return `<div class="slot-level"><div><strong>${ordinal(level)}</strong><span>${remain}/${max} available</span></div><div class="slot-orbs">${orbs}</div></div>`;
+    return `<div class="slot-level"><div class="slot-level-top"><strong>${ordinal(level)} level</strong><span class="slot-count">${remain}/${max} available</span></div><div class="slot-orbs">${orbs}</div></div>`;
   }).join("") || `<div class="notice">No spell slots yet.</div>`;
 }
 
@@ -375,6 +402,11 @@ function readInventoryDraftFromDom() {
   }));
 }
 
+if (!verifyUiVersion()) {
+  // The page is reloading to pick up matching static assets.
+  throw new Error("Refreshing updated interface…");
+}
+
 // Navigation
 $$('.tab').forEach(btn => btn.onclick = () => {
   $$('.tab').forEach(x=>x.classList.toggle('active',x===btn));
@@ -440,4 +472,7 @@ $("#loginForm").onsubmit=async e=>{
   catch(err){$("#loginError").textContent=err.message;}
 };
 
-boot().catch(err=>{document.body.innerHTML=`<main><div class="notice"><b>Companion failed to start:</b> ${escapeHtml(err.message)}</div></main>`;});
+boot().catch(err=>{
+  if (err.message === "Refreshing updated interface…") return;
+  document.body.innerHTML = `<main class="content-shell"><div class="panel" style="max-width:760px;margin:8vh auto"><div class="eyebrow">STARTUP ERROR · v${UI_VERSION}</div><h2 style="margin:.45rem 0 1rem">Companion failed to start</h2><p class="muted" style="line-height:1.6">${escapeHtml(err.message)}</p><button class="primary" style="margin-top:1rem" onclick="location.reload()">Reload companion</button></div></main>`;
+});
