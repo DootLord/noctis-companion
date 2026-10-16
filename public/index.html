@@ -1,0 +1,129 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <meta name="theme-color" content="#0d0b10" />
+  <title>Noctis — Necromancer's Grimoire</title>
+  <link rel="stylesheet" href="/styles.css" />
+</head>
+<body>
+  <div id="login" class="login hidden">
+    <form id="loginForm" class="panel login-card">
+      <div class="sigil">☠</div>
+      <h1>Noctis</h1>
+      <p>Open the grimoire.</p>
+      <input id="password" type="password" placeholder="Companion password" autocomplete="current-password" />
+      <button type="submit">Enter</button>
+      <div id="loginError" class="error"></div>
+    </form>
+  </div>
+
+  <div id="app" class="hidden">
+    <header>
+      <div>
+        <div class="eyebrow">NECROMANCER'S GRIMOIRE</div>
+        <h1 id="charName">Noctis</h1>
+        <div id="subtitle" class="subtitle"></div>
+      </div>
+      <div class="header-stats">
+        <div><strong id="dc">13</strong><span>Spell DC</span></div>
+        <div><strong id="atk">+5</strong><span>Spell Attack</span></div>
+        <div><strong id="prepCount">0 / 6</strong><span>Prepared</span></div>
+      </div>
+    </header>
+
+    <nav class="tabs">
+      <button class="tab active" data-tab="prepared">Prepared</button>
+      <button class="tab" data-tab="spellbook">Spellbook</button>
+      <button class="tab" data-tab="discover">Choose Spells</button>
+      <button class="tab" data-tab="levelup">Level Up</button>
+      <button class="tab" data-tab="settings">Settings</button>
+    </nav>
+
+    <main>
+      <section id="prepared" class="view active">
+        <div class="section-title">
+          <div>
+            <div class="eyebrow">GAMEPLAY VIEW</div>
+            <h2>Prepared Spells</h2>
+          </div>
+          <div id="slotSummary" class="slot-summary"></div>
+        </div>
+        <p class="muted">Toggle preparation from your spellbook. Cantrips do not consume prepared slots.</p>
+        <div id="preparedList" class="spell-grid"></div>
+      </section>
+
+      <section id="spellbook" class="view">
+        <div class="section-title">
+          <div>
+            <div class="eyebrow">YOUR SPELLBOOK</div>
+            <h2>Known Spells</h2>
+          </div>
+          <input id="bookSearch" class="search" placeholder="Search spellbook…" />
+        </div>
+        <div id="bookStats" class="notice"></div>
+        <div id="bookList" class="spell-grid"></div>
+      </section>
+
+      <section id="discover" class="view">
+        <div class="section-title">
+          <div>
+            <div class="eyebrow">SRD 5.1 · WIZARD</div>
+            <h2>Choose Spells</h2>
+          </div>
+          <div class="filters">
+            <select id="levelFilter">
+              <option value="all">Cantrip–2nd</option>
+              <option value="0">Cantrips</option>
+              <option value="1">1st Level</option>
+              <option value="2">2nd Level</option>
+            </select>
+            <input id="spellSearch" class="search" placeholder="Search spells…" />
+          </div>
+        </div>
+        <p class="muted">At level 3, your spellbook should normally contain at least 10 levelled spells. Add only spells your character has actually learned.</p>
+        <div id="discoverList" class="spell-grid"></div>
+      </section>
+
+      <section id="levelup" class="view">
+        <div class="section-title">
+          <div>
+            <div class="eyebrow">PROGRESSION</div>
+            <h2>What Comes Next?</h2>
+          </div>
+        </div>
+        <div id="levelCards" class="level-grid"></div>
+      </section>
+
+      <section id="settings" class="view">
+        <div class="section-title">
+          <div>
+            <div class="eyebrow">COMPANION SETTINGS</div>
+            <h2>Sheet Link</h2>
+          </div>
+        </div>
+        <div class="panel settings-panel">
+          <label>Wizard Level
+            <input id="levelSetting" type="number" min="1" max="20" />
+          </label>
+          <label>Intelligence Score
+            <input id="intSetting" type="number" min="1" max="30" />
+          </label>
+          <p class="muted">These values override the automatic sheet read if the original template layout changes later.</p>
+          <button id="saveSettings">Save settings</button>
+          <button id="logout" class="secondary">Log out</button>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <dialog id="spellDialog">
+    <button id="closeDialog" class="dialog-close">×</button>
+    <div id="spellDetail"></div>
+  </dialog>
+
+  <div id="toast" class="toast"></div>
+  <script src="/app.js"></script>
+</body>
+</html>
