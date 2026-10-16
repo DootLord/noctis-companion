@@ -33,6 +33,11 @@ app.use(session({
   }
 }));
 
+// Unauthenticated health endpoint for Docker/Coolify.
+app.get("/health", (req, res) => {
+  res.status(200).json({ ok: true, service: "noctis-companion" });
+});
+
 function getCredentials() {
   const encoded = process.env.GOOGLE_SERVICE_ACCOUNT_B64;
   if (!encoded) throw new Error("GOOGLE_SERVICE_ACCOUNT_B64 is not configured.");
@@ -320,10 +325,17 @@ app.get("/api/spells/:index", requireAuth, async (req, res) => {
 
 app.use(express.static(path.join(__dirname, "public")));
 
-app.get("*", (req, res) => {
+// Express 5 / path-to-regexp no longer accepts a bare "*" route.
+// This named wildcard also matches the root path.
+app.get("/{*splat}", (req, res) => {
   res.sendFile(path.join(__dirname, "public", "index.html"));
 });
 
-app.listen(PORT, () => {
-  console.log(`Noctis Companion listening on :${PORT}`);
+const server = app.listen(PORT, "0.0.0.0", () => {
+  console.log(`Noctis Companion listening on 0.0.0.0:${PORT}`);
+});
+
+server.on("error", (err) => {
+  console.error("Failed to start HTTP server:", err);
+  process.exit(1);
 });
