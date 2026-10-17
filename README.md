@@ -134,3 +134,16 @@ For the current Wizard 3 / INT 17 character this gives:
 The older build only wrote known/prepared state into `APP_DATA`. After deploying this version, open **Settings → Rebuild DM spell sheets** once. That projects the existing state into `SPELLS` and `SpellBook` immediately.
 
 After that, learning/preparing/removing spells, casting spells, and resting sync the relevant sheet cells automatically.
+
+## v5 - Feats and guided level-ups
+
+The companion now includes a PHB 2014 feat browser and a guided Wizard level-up flow.
+
+- Feats are stored in `APP_DATA` and projected into the `ABILITIES` sheet's custom section for the DM.
+- Wizard ASI/feat levels are handled at 4, 8, 12, 16 and 19.
+- Each Wizard level-up requires two new levelled Wizard spells.
+- Levels 4 and 10 also prompt for the additional Wizard cantrip.
+- The level-up workflow supports either a feat or the normal +2 / +1-and-+1 Ability Score Improvement.
+- Half-feat ability increases are written back to the corresponding MAIN ability score.
+- At Necromancer 6, `Animate Dead` is added automatically if it is not already in the spellbook.
+- The Level Up tab includes a 1-20 Wizard / School of Necromancy roadmap and slot progression.

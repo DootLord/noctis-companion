@@ -17,7 +17,9 @@ const APP_DATA_SHEET = "APP_DATA";
 const SPELLS_SHEET = "SPELLS";
 const SPELLBOOK_SHEET = "SpellBook";
 const BAG_SHEET = "BAG";
+const ABILITIES_SHEET = "ABILITIES";
 const LOCAL_SPELLS_PATH = path.join(__dirname, "data", "wizard-spells-2014.json");
+const LOCAL_FEATS_PATH = path.join(__dirname, "data", "feats-2014.json");
 
 if (!SPREADSHEET_ID) console.warn("SPREADSHEET_ID is not set.");
 
@@ -78,8 +80,24 @@ function readLocalSpells() {
   }
 }
 
+function readLocalFeats() {
+  try {
+    if (!fs.existsSync(LOCAL_FEATS_PATH)) return [];
+    const parsed = JSON.parse(fs.readFileSync(LOCAL_FEATS_PATH, "utf8"));
+    return Array.isArray(parsed) ? parsed : (parsed.feats || []);
+  } catch (err) {
+    console.warn("Could not read local feat database:", err.message);
+    return [];
+  }
+}
+
 const catalogue = readLocalSpells();
 const spellByIndex = new Map(catalogue.map(s => [s.index, s]));
+const feats = readLocalFeats();
+const featById = new Map(feats.map(f => [f.id, f]));
+const ASI_LEVELS = new Set([4, 8, 12, 16, 19]);
+const ABILITY_CELLS = { str:"B8", dex:"B12", con:"B16", int:"B20", wis:"B26", cha:"B32" };
+const ABILITY_NAMES = { str:"Strength", dex:"Dexterity", con:"Constitution", int:"Intelligence", wis:"Wisdom", cha:"Charisma" };
 
 async function getValues(range) {
   const result = await sheetsClient().spreadsheets.values.get({ spreadsheetId: SPREADSHEET_ID, range });
@@ -165,7 +183,9 @@ function emptyState() {
     settings: {},
     slotsUsed: {},
     casts: {},
-    resources: { arcaneRecoveryUsed: false }
+    resources: { arcaneRecoveryUsed: false },
+    feats: [],
+    levelHistory: []
   };
 }
 
@@ -184,6 +204,8 @@ async function readState() {
     if (type === "slot") state.slotsUsed[key] = Math.max(0, asNumber(raw, 0));
     if (type === "cast") state.casts[key] = Math.max(0, asNumber(raw, 0));
     if (type === "resource") state.resources[key] = raw === "1" || raw === "true";
+    if (type === "feat") { try { state.feats.push(JSON.parse(raw || "{}")); } catch {} }
+    if (type === "levelup") { try { state.levelHistory.push(JSON.parse(raw || "{}")); } catch {} }
   }
 
   state.known = [...new Set(state.known)];
@@ -202,6 +224,8 @@ async function writeState(state) {
   for (const [key, value] of Object.entries(state.slotsUsed || {})) rows.push(["slot", key, String(value)]);
   for (const [key, value] of Object.entries(state.casts || {})) rows.push(["cast", key, String(value)]);
   for (const [key, value] of Object.entries(state.resources || {})) rows.push(["resource", key, value ? "1" : "0"]);
+  (state.feats || []).forEach((feat, i) => rows.push(["feat", `${feat.id || "feat"}:${i}`, JSON.stringify(feat)]));
+  (state.levelHistory || []).forEach(entry => rows.push(["levelup", String(entry.level || rows.length), JSON.stringify(entry)]));
 
   const sheets = sheetsClient();
   await sheets.spreadsheets.values.clear({ spreadsheetId: SPREADSHEET_ID, range: `${APP_DATA_SHEET}!A:C` });
@@ -217,11 +241,13 @@ async function getCharacter(state) {
   const main = await getValues("MAIN!A1:AN36");
   const name = String(cell(main, "B2") || "Noctis");
   const levelFromSheet = clampInt(cell(main, "AC2"), 1, 20, 3);
-  const intFromSheet = clampInt(cell(main, "B20"), 1, 30, 17);
+  const sheetAbilities = {};
+  for (const [key, a1] of Object.entries(ABILITY_CELLS)) sheetAbilities[key] = clampInt(cell(main, a1), 1, 30, key === "int" ? 17 : 10);
 
   // Invalid/empty overrides are ignored rather than corrupting the character.
   const level = clampInt(state.settings.level, 1, 20, levelFromSheet);
-  const intScore = clampInt(state.settings.intScore, 1, 30, intFromSheet);
+  const intScore = clampInt(state.settings.intScore, 1, 30, sheetAbilities.int);
+  const abilities = { ...sheetAbilities, int: intScore };
   const intMod = Math.floor((intScore - 10) / 2);
   const prof = Math.ceil(level / 4) + 1;
   const slots = slotTable(level);
@@ -234,18 +260,47 @@ async function getCharacter(state) {
     subclass: "School of Necromancy",
     race: "Tiefling",
     level,
+    abilities,
     intScore,
     intMod,
     proficiencyBonus: prof,
     spellAttack: intMod + prof,
     spellSaveDC: 8 + intMod + prof,
     preparedMax: Math.max(1, level + intMod),
-    cantripsKnown: level < 4 ? 3 : level < 10 ? 4 : 5,
+    cantripsKnown: cantripsKnownAt(level),
     spellbookMinimum: 6 + Math.max(0, level - 1) * 2,
     slots,
     slotsUsed,
     arcaneRecoveryBudget: Math.ceil(level / 2)
   };
+}
+
+function cantripsKnownAt(level) {
+  return level < 4 ? 3 : level < 10 ? 4 : 5;
+}
+
+function abilityModifier(score) {
+  return Math.floor((Number(score || 10) - 10) / 2);
+}
+
+function featEligibility(feat, character, state) {
+  if (!feat) return { eligible:false, reason:"Unknown feat" };
+  if (!feat.repeatable && (state.feats || []).some(x => x.id === feat.id)) return { eligible:false, reason:"Already chosen" };
+  const p = feat.prerequisite;
+  if (!p) return { eligible:true, reason:"" };
+  if (p.spellcasting && character.class !== "Wizard") return { eligible:false, reason:"Requires spellcasting" };
+  if (p.ability && Number(character.abilities?.[p.ability] || 0) < Number(p.min || 0)) {
+    return { eligible:false, reason:`Requires ${ABILITY_NAMES[p.ability] || p.ability} ${p.min}+` };
+  }
+  if (p.anyAbility) {
+    const ok = (p.anyAbility.abilities || []).some(a => Number(character.abilities?.[a] || 0) >= Number(p.anyAbility.min || 0));
+    if (!ok) return { eligible:false, reason:`Requires ${p.anyAbility.abilities.map(a=>ABILITY_NAMES[a]).join(" or ")} ${p.anyAbility.min}+` };
+  }
+  if (p.armor) {
+    // Noctis is a single-class Wizard, so the base class grants no armour proficiency.
+    return { eligible:false, reason:`Requires ${p.armor} armour proficiency` };
+  }
+  return { eligible:true, reason:"" };
 }
 
 function spellParts(spell) {
@@ -373,10 +428,30 @@ async function syncSpellBook(state) {
   await updateRanges(data);
 }
 
+async function syncFeatsSheet(state) {
+  const slots = [];
+  for (let row = 19; row <= 25; row++) slots.push(`B${row}`);
+  for (let row = 19; row <= 25; row++) slots.push(`U${row}`);
+  const data = [one(`${ABILITIES_SHEET}!B18`, "FEATS / CUSTOM")];
+  slots.forEach((cellRef, i) => {
+    const chosen = (state.feats || [])[i];
+    const feat = chosen ? featById.get(chosen.id) : null;
+    let text = "";
+    if (feat) {
+      const boost = chosen.ability ? ` (+1 ${String(chosen.ability).toUpperCase()})` : "";
+      const note = chosen.note ? ` [${chosen.note}]` : "";
+      text = `${feat.name}${boost}${note} — ${feat.summary}`;
+    }
+    data.push(one(`${ABILITIES_SHEET}!${cellRef}`, text));
+  });
+  await updateRanges(data);
+}
+
 async function syncAll(state, character) {
   await Promise.all([
     syncSpellSheet(state, character, { names:true, prepared:true, slots:true }),
-    syncSpellBook(state)
+    syncSpellBook(state),
+    syncFeatsSheet(state)
   ]);
 }
 
@@ -402,6 +477,17 @@ app.get("/api/spells/:index", requireAuth, (req, res) => {
   const spell = spellByIndex.get(req.params.index);
   if (!spell) return res.status(404).json({ error: "Spell not found" });
   res.json(spell);
+});
+
+app.get("/api/feats", requireAuth, async (_req, res) => {
+  try {
+    const state = await readState();
+    const character = await getCharacter(state);
+    res.json({ results: feats.map(feat => ({ ...feat, ...featEligibility(feat, character, state) })) });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: err.message });
+  }
 });
 
 app.put("/api/state", requireAuth, async (req, res) => {
@@ -436,6 +522,107 @@ app.put("/api/state", requireAuth, async (req, res) => {
     }
 
     res.json({ ok: true, state: next, character });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.post("/api/level-up", requireAuth, async (req, res) => {
+  try {
+    const state = await readState();
+    const character = await getCharacter(state);
+    if (character.level >= 20) return res.status(400).json({ error: "Noctis is already Wizard 20." });
+
+    const targetLevel = character.level + 1;
+    const targetSlots = slotTable(targetLevel);
+    const maxSpellLevel = targetSlots.length;
+    const newSpells = Array.isArray(req.body?.spells) ? [...new Set(req.body.spells.map(String))] : [];
+    if (newSpells.length !== 2) return res.status(400).json({ error: "Choose exactly two new levelled wizard spells for this level." });
+    for (const index of newSpells) {
+      const spell = spellByIndex.get(index);
+      if (!spell || Number(spell.level) < 1 || Number(spell.level) > maxSpellLevel) return res.status(400).json({ error: "One of the selected spells is not available at your new Wizard level." });
+      if (state.known.includes(index)) return res.status(400).json({ error: `${spell.name} is already in your spellbook.` });
+    }
+
+    const needsCantrip = cantripsKnownAt(targetLevel) > cantripsKnownAt(character.level);
+    const cantrip = String(req.body?.cantrip || "");
+    if (needsCantrip) {
+      const spell = spellByIndex.get(cantrip);
+      if (!spell || Number(spell.level) !== 0 || state.known.includes(cantrip)) return res.status(400).json({ error: "Choose one new Wizard cantrip for this level." });
+    }
+
+    const abilityUpdates = {};
+    let advancement = null;
+    let chosenFeat = null;
+    if (ASI_LEVELS.has(targetLevel)) {
+      advancement = String(req.body?.advancement || "");
+      if (!['feat','asi'].includes(advancement)) return res.status(400).json({ error: "Choose either a feat or an Ability Score Improvement." });
+
+      if (advancement === 'feat') {
+        const feat = featById.get(String(req.body?.featId || ""));
+        const eligibility = featEligibility(feat, character, state);
+        if (!eligibility.eligible) return res.status(400).json({ error: eligibility.reason || "That feat is not currently available." });
+        let boostAbility = null;
+        if ((feat.abilityIncrease || []).length) {
+          boostAbility = String(req.body?.featAbility || "").toLowerCase();
+          if (!boostAbility && feat.abilityIncrease.length === 1) boostAbility = feat.abilityIncrease[0];
+          if (!feat.abilityIncrease.includes(boostAbility)) return res.status(400).json({ error: `Choose which ability ${feat.name} increases.` });
+          const current = Number(character.abilities?.[boostAbility] || 0);
+          if (current >= 20) return res.status(400).json({ error: `${ABILITY_NAMES[boostAbility]} is already 20.` });
+          abilityUpdates[boostAbility] = current + 1;
+        }
+        chosenFeat = { id:feat.id, ability:boostAbility, note:String(req.body?.featNote || "").trim().slice(0,180), chosenAtLevel:targetLevel };
+      } else {
+        const mode = String(req.body?.asi?.mode || "");
+        const choices = Array.isArray(req.body?.asi?.abilities) ? req.body.asi.abilities.map(x=>String(x).toLowerCase()) : [];
+        if (mode === 'plus2') {
+          const a = choices[0];
+          if (!ABILITY_CELLS[a]) return res.status(400).json({ error: "Choose an ability for the +2 ASI." });
+          const current = Number(character.abilities?.[a] || 0);
+          if (current + 2 > 20) return res.status(400).json({ error: `${ABILITY_NAMES[a]} cannot be raised above 20 by this ASI.` });
+          abilityUpdates[a] = current + 2;
+        } else if (mode === 'split') {
+          const unique = [...new Set(choices.filter(a=>ABILITY_CELLS[a]))];
+          if (unique.length !== 2) return res.status(400).json({ error: "Choose two different abilities for +1/+1." });
+          for (const a of unique) {
+            const current = Number(character.abilities?.[a] || 0);
+            if (current + 1 > 20) return res.status(400).json({ error: `${ABILITY_NAMES[a]} cannot be raised above 20 by this ASI.` });
+            abilityUpdates[a] = current + 1;
+          }
+        } else return res.status(400).json({ error: "Choose +2 to one ability or +1 to two abilities." });
+      }
+    }
+
+    state.known = [...new Set([...state.known, ...newSpells, ...(needsCantrip ? [cantrip] : [])])];
+    const autoAdded = [];
+    if (targetLevel === 6 && spellByIndex.has('animate-dead') && !state.known.includes('animate-dead')) {
+      state.known.push('animate-dead');
+      autoAdded.push('animate-dead');
+    }
+    if (chosenFeat) state.feats.push(chosenFeat);
+
+    const sheetWrites = [one(`MAIN!AC2`, targetLevel)];
+    for (const [ability, score] of Object.entries(abilityUpdates)) sheetWrites.push(one(`MAIN!${ABILITY_CELLS[ability]}`, score));
+    await updateRanges(sheetWrites);
+
+    // A real level-up writes back to the sheet, so stale troubleshooting overrides should not mask it.
+    delete state.settings.level;
+    if (Object.keys(abilityUpdates).includes('int')) delete state.settings.intScore;
+    state.levelHistory.push({
+      level:targetLevel,
+      spells:newSpells,
+      cantrip:needsCantrip ? cantrip : null,
+      advancement,
+      feat:chosenFeat,
+      asi:advancement === 'asi' ? req.body.asi : null,
+      autoAdded
+    });
+
+    await writeState(state);
+    const updatedCharacter = await getCharacter(state);
+    await syncAll(state, updatedCharacter);
+    res.json({ ok:true, state, character:updatedCharacter, levelUp:state.levelHistory[state.levelHistory.length - 1] });
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: err.message });

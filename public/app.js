@@ -1,11 +1,12 @@
-const UI_VERSION = "3.0.0";
+const UI_VERSION = "5.0.0";
 const $ = q => document.querySelector(q);
 const $$ = q => [...document.querySelectorAll(q)];
 
 const REQUIRED_UI = [
   "#login", "#loginForm", "#app", "#charName", "#subtitle", "#dc", "#atk", "#prepCount",
   "#slotDashboard", "#preparedList", "#bookList", "#discoverList", "#inventoryRows", "#levelCards",
-  "#levelFilter", "#schoolFilter", "#bookSearch", "#spellSearch", "#castResult", "#toast"
+  "#ownedFeats", "#featCatalogue", "#levelUpForm", "#nextLevelSummary", "#levelSpell1", "#levelSpell2",
+  "#levelFilter", "#schoolFilter", "#bookSearch", "#spellSearch", "#featSearch", "#castResult", "#toast"
 ];
 
 function verifyUiVersion() {
@@ -29,8 +30,10 @@ function verifyUiVersion() {
 
 let model = null;
 let catalogue = [];
+let featCatalogue = [];
 let inventory = { coins: {}, items: [] };
 let inventoryDraft = [];
+let discoverLimit = window.matchMedia("(max-width: 700px)").matches ? 24 : 60;
 
 async function api(url, options = {}) {
   const res = await fetch(url, {
@@ -190,11 +193,12 @@ async function boot() {
 }
 
 async function refresh() {
-  const [charResult, spellResult, invResult] = await Promise.all([
-    api("/api/character"), api("/api/spells"), api("/api/inventory")
+  const [charResult, spellResult, featResult, invResult] = await Promise.all([
+    api("/api/character"), api("/api/spells"), api("/api/feats"), api("/api/inventory")
   ]);
   model = charResult;
   catalogue = spellResult.results || [];
+  featCatalogue = featResult.results || [];
   inventory = invResult;
   inventoryDraft = (inventory.items || []).map(x => ({...x}));
   renderAll();
@@ -219,6 +223,7 @@ function renderAll() {
   renderSpellbook();
   renderDiscover();
   renderInventory();
+  renderFeats();
   renderLevelUp();
 }
 
@@ -273,7 +278,12 @@ function renderDiscover() {
   if (levelFilter !== "all") spells = spells.filter(s => Number(s.level) === Number(levelFilter));
   if (schoolFilter !== "all") spells = spells.filter(s => schoolName(s) === schoolFilter);
   if (q) spells = spells.filter(s => `${s.name} ${schoolName(s)} ${spellSummary(s)}`.toLowerCase().includes(q));
-  $("#discoverList").innerHTML = spells.sort((a,b)=>a.level-b.level || a.name.localeCompare(b.name)).map(s=>spellCard(s,"discover")).join("");
+  spells.sort((a,b)=>a.level-b.level || a.name.localeCompare(b.name));
+  const visible = spells.slice(0, discoverLimit);
+  const more = spells.length > visible.length
+    ? `<div class="load-more-wrap"><button class="secondary load-more" data-action="show-more">Show ${Math.min(24, spells.length-visible.length)} more · ${spells.length-visible.length} remaining</button></div>`
+    : "";
+  $("#discoverList").innerHTML = visible.map(s=>spellCard(s,"discover")).join("") + more;
 }
 
 function renderInventory() {
@@ -289,15 +299,174 @@ function renderInventory() {
   </div>`).join("");
 }
 
+function abilityLabel(key) {
+  return ({str:"Strength",dex:"Dexterity",con:"Constitution",int:"Intelligence",wis:"Wisdom",cha:"Charisma"})[key] || key;
+}
+
+function renderFeats() {
+  const chosen = model.state.feats || [];
+  $("#ownedFeats").innerHTML = chosen.length ? chosen.map(entry => {
+    const feat = featCatalogue.find(f => f.id === entry.id);
+    if (!feat) return "";
+    return `<article class="owned-feat"><div><div class="spell-kicker">Chosen at Wizard ${entry.chosenAtLevel || "?"}</div><h4>${escapeHtml(feat.name)}</h4></div><p>${escapeHtml(feat.summary)}</p>${entry.ability ? `<span class="badge">+1 ${escapeHtml(abilityLabel(entry.ability))}</span>` : ""}${entry.note ? `<span class="badge">${escapeHtml(entry.note)}</span>` : ""}</article>`;
+  }).join("") : `<div class="notice">No feats selected yet. Your first Wizard ASI/feat choice is at level 4.</div>`;
+
+  const q = $("#featSearch").value.trim().toLowerCase();
+  const list = featCatalogue.filter(f => !q || `${f.name} ${f.summary} ${f.reason || ""}`.toLowerCase().includes(q));
+  $("#featCatalogue").innerHTML = list.map(feat => {
+    const chosenAlready = chosen.some(x => x.id === feat.id);
+    const status = chosenAlready && !feat.repeatable ? "Chosen" : feat.eligible ? "Available" : (feat.reason || "Unavailable");
+    return `<article class="feat-card ${feat.eligible ? "eligible" : "locked"}">
+      <div class="feat-card-head"><div><div class="spell-kicker">PHB FEAT</div><h3>${escapeHtml(feat.name)}</h3></div><span class="badge ${feat.eligible ? "prepared-badge" : ""}">${escapeHtml(status)}</span></div>
+      <p>${escapeHtml(feat.summary)}</p>
+      ${feat.prerequisite ? `<div class="feat-prereq">${feat.eligible ? "Prerequisite met" : escapeHtml(feat.reason || "Prerequisite not met")}</div>` : `<div class="feat-prereq">No prerequisite</div>`}
+      ${(feat.abilityIncrease || []).length ? `<div class="feat-boost">Ability increase: ${feat.abilityIncrease.map(a=>escapeHtml(abilityLabel(a))).join(" or ")} +1</div>` : ""}
+    </article>`;
+  }).join("");
+}
+
+function wizardSlotsAt(level) {
+  const table = {
+    1:[2],2:[3],3:[4,2],4:[4,3],5:[4,3,2],6:[4,3,3],7:[4,3,3,1],8:[4,3,3,2],9:[4,3,3,3,1],10:[4,3,3,3,2],
+    11:[4,3,3,3,2,1],12:[4,3,3,3,2,1],13:[4,3,3,3,2,1,1],14:[4,3,3,3,2,1,1],15:[4,3,3,3,2,1,1,1],16:[4,3,3,3,2,1,1,1],
+    17:[4,3,3,3,2,1,1,1,1],18:[4,3,3,3,3,1,1,1,1],19:[4,3,3,3,3,2,1,1,1],20:[4,3,3,3,3,2,2,1,1]
+  };
+  return table[level] || [];
+}
+
+function wizardFeatures(level) {
+  const items = level === 1 ? [] : ["Learn 2 wizard spells"];
+  const unlocks = {3:"Unlock 2nd-level spells",5:"Unlock 3rd-level spells",7:"Unlock 4th-level spells",9:"Unlock 5th-level spells",11:"Unlock 6th-level spells",13:"Unlock 7th-level spells",15:"Unlock 8th-level spells",17:"Unlock 9th-level spells"};
+  if (unlocks[level]) items.unshift(unlocks[level]);
+  if (level === 1) items.unshift("Spellcasting", "Arcane Recovery", "3 cantrips known", "6 first-level spells in your starting spellbook");
+  if (level === 2) items.unshift("School of Necromancy", "Necromancy Savant", "Grim Harvest");
+  if (level === 4) items.unshift("ASI or feat", "Learn 1 additional cantrip");
+  if ([8,12,16,19].includes(level)) items.unshift("ASI or feat");
+  if (level === 6) items.unshift("Undead Thralls", "Animate Dead added to your spellbook if needed");
+  if (level === 10) items.unshift("Inured to Undeath", "Learn 1 additional cantrip");
+  if (level === 14) items.unshift("Command Undead");
+  if (level === 18) items.unshift("Spell Mastery");
+  if (level === 20) items.unshift("Signature Spells");
+  if ([5,9,13,17].includes(level)) items.push(`Proficiency bonus increases to +${Math.ceil(level/4)+1}`);
+  const slots = wizardSlotsAt(level);
+  if (slots.length) items.push(`Spell slots: ${slots.map((n,i)=>`${n}×${ordinal(i+1)}`).join(", ")}`);
+  return items;
+}
+
+function spellSelectOptions(spells, placeholder="Choose a spell…") {
+  const grouped = new Map();
+  for (const spell of spells) {
+    const level = Number(spell.level || 0);
+    if (!grouped.has(level)) grouped.set(level, []);
+    grouped.get(level).push(spell);
+  }
+  let html = `<option value="">${escapeHtml(placeholder)}</option>`;
+  for (const [level, entries] of [...grouped.entries()].sort((a,b)=>a[0]-b[0])) {
+    html += `<optgroup label="${level === 0 ? "Cantrips" : `${ordinal(level)}-level spells`}">` + entries.sort((a,b)=>a.name.localeCompare(b.name)).map(s=>`<option value="${escapeHtml(s.index)}">${escapeHtml(s.name)}</option>`).join("") + `</optgroup>`;
+  }
+  return html;
+}
+
+function selectedLevelSpellPreview() {
+  const ids = [$("#levelSpell1").value, $("#levelSpell2").value].filter(Boolean);
+  const cards = ids.map(getSpell).filter(Boolean);
+  $("#levelSpellPreview").innerHTML = cards.length ? cards.map(s=>`<div><b>${escapeHtml(s.name)}</b><span>${escapeHtml(spellSummary(s).slice(0,180))}${spellSummary(s).length>180?"…":""}</span></div>`).join("") : "";
+}
+
+function selectedFeatPreview() {
+  const feat = featCatalogue.find(f => f.id === $("#levelFeat").value);
+  $("#levelFeatPreview").innerHTML = feat ? `<div><b>${escapeHtml(feat.name)}</b><span>${escapeHtml(feat.summary)}</span></div>` : "";
+  const label = $("#featAbilityLabel");
+  const select = $("#levelFeatAbility");
+  const boosts = feat?.abilityIncrease || [];
+  if (boosts.length) {
+    label.classList.remove("hidden");
+    select.innerHTML = boosts.map(a=>`<option value="${a}">${escapeHtml(abilityLabel(a))} (${model.character.abilities?.[a] ?? "?"} → ${Math.min(20, Number(model.character.abilities?.[a] || 0)+1)})</option>`).join("");
+  } else {
+    label.classList.add("hidden");
+    select.innerHTML = "";
+  }
+}
+
 function renderLevelUp() {
-  const l = model.character.level;
-  const cards = [
-    { level:l, title:"Right now", items:[`${model.character.preparedMax} prepared spells`,`${model.character.spellbookMinimum} minimum levelled spells in your spellbook`,`${model.character.cantripsKnown} cantrips known`,"Necromancy Savant","Grim Harvest"] },
-    { level:4, title:"Wizard 4", items:["Ability Score Improvement / feat","Learn 2 more wizard spells","Gain another cantrip","3 second-level spell slots"] },
-    { level:5, title:"Wizard 5", items:["Unlock 3rd-level wizard spells","Learn 2 more wizard spells","Animate Dead becomes available","Proficiency bonus becomes +3"] },
-    { level:6, title:"Necromancer 6", items:["Undead Thralls","Animate Dead is added if you don't already know it","Your created undead become stronger"] }
-  ];
-  $("#levelCards").innerHTML = cards.map(c=>`<article class="level-card ${c.level===l?"current":""}"><div class="eyebrow">LEVEL ${c.level}</div><h3>${c.title}</h3><ul>${c.items.map(i=>`<li>${escapeHtml(i)}</li>`).join("")}</ul></article>`).join("");
+  const current = model.character.level;
+  const target = current + 1;
+  const atMax = current >= 20;
+  $("#levelMaxNotice").classList.toggle("hidden", !atMax);
+  $("#levelUpForm").classList.toggle("hidden", atMax);
+  $("#nextLevelBadge").textContent = atMax ? "Wizard 20 · complete" : `Wizard ${current} → ${target}`;
+  if (atMax) {
+    $("#nextLevelSummary").innerHTML = `<div class="notice">You've reached the end of the 2014 Wizard class progression.</div>`;
+  } else {
+    const maxSpellLevel = ({1:1,2:1,3:2,4:2,5:3,6:3,7:4,8:4,9:5,10:5,11:6,12:6,13:7,14:7,15:8,16:8,17:9,18:9,19:9,20:9})[target];
+    const options = catalogue.filter(s => Number(s.level) >= 1 && Number(s.level) <= maxSpellLevel && !model.state.known.includes(s.index));
+    const old1 = $("#levelSpell1").value, old2 = $("#levelSpell2").value;
+    $("#levelSpell1").innerHTML = spellSelectOptions(options, "Choose first spell…");
+    $("#levelSpell2").innerHTML = spellSelectOptions(options, "Choose second spell…");
+    if (options.some(s=>s.index===old1)) $("#levelSpell1").value=old1;
+    if (options.some(s=>s.index===old2)) $("#levelSpell2").value=old2;
+    selectedLevelSpellPreview();
+
+    const needsCantrip = (target === 4 || target === 10);
+    $("#cantripStep").classList.toggle("hidden", !needsCantrip);
+    if (needsCantrip) {
+      const cantrips = catalogue.filter(s=>Number(s.level)===0 && !model.state.known.includes(s.index));
+      $("#levelCantrip").innerHTML = spellSelectOptions(cantrips, "Choose new cantrip…");
+    }
+
+    const needsAdvancement = [4,8,12,16,19].includes(target);
+    $("#advancementStep").classList.toggle("hidden", !needsAdvancement);
+    if (needsAdvancement) {
+      const eligible = featCatalogue.filter(f=>f.eligible).sort((a,b)=>a.name.localeCompare(b.name));
+      $("#levelFeat").innerHTML = `<option value="">Choose a feat…</option>` + eligible.map(f=>`<option value="${escapeHtml(f.id)}">${escapeHtml(f.name)}</option>`).join("");
+      selectedFeatPreview();
+      const abilityOptions = Object.entries(model.character.abilities || {}).map(([a,v])=>`<option value="${a}">${escapeHtml(abilityLabel(a))} (${v})</option>`).join("");
+      $("#asiAbility1").innerHTML = abilityOptions;
+      $("#asiAbility2").innerHTML = abilityOptions;
+      updateAdvancementPanels();
+    }
+
+    $("#levelUpTitle").textContent = `Advance to Wizard ${target}`;
+    $("#levelUpSummary").textContent = `This will set the character sheet to Wizard ${target}, add your spell choices, and sync SPELLS / SpellBook${needsAdvancement ? " plus your feat or ASI" : ""}.`;
+    $("#nextLevelSummary").innerHTML = wizardFeatures(target).map((x,i)=>`<div class="next-change"><span>${i+1}</span><p>${escapeHtml(x)}</p></div>`).join("");
+  }
+
+  $("#levelCards").innerHTML = Array.from({length:20},(_,i)=>i+1).map(level=>{
+    const status = level < current ? "done" : level === current ? "current" : level === target ? "next" : "future";
+    return `<article class="level-card ${status}"><div class="level-card-top"><div class="eyebrow">LEVEL ${level}</div><span class="level-status">${status === "done" ? "✓" : status === "current" ? "Current" : status === "next" ? "Next" : ""}</span></div><h3>Wizard ${level}</h3><ul>${wizardFeatures(level).map(i=>`<li>${escapeHtml(i)}</li>`).join("")}</ul></article>`;
+  }).join("");
+}
+
+function updateAdvancementPanels() {
+  const value = document.querySelector('input[name="advancement"]:checked')?.value || "feat";
+  $("#featChoicePanel").classList.toggle("hidden", value !== "feat");
+  $("#asiChoicePanel").classList.toggle("hidden", value !== "asi");
+  const split = $("#asiMode").value === "split";
+  $("#asiAbility2Label").classList.toggle("hidden", !split);
+}
+
+async function commitLevelUp() {
+  const target = model.character.level + 1;
+  const body = { spells:[$("#levelSpell1").value,$("#levelSpell2").value] };
+  if (target === 4 || target === 10) body.cantrip = $("#levelCantrip").value;
+  if ([4,8,12,16,19].includes(target)) {
+    body.advancement = document.querySelector('input[name="advancement"]:checked')?.value || "feat";
+    if (body.advancement === "feat") {
+      body.featId = $("#levelFeat").value;
+      body.featAbility = $("#levelFeatAbility").value;
+      body.featNote = $("#levelFeatNote").value;
+    } else {
+      body.asi = { mode:$("#asiMode").value, abilities:[$("#asiAbility1").value, ...( $("#asiMode").value === "split" ? [$("#asiAbility2").value] : [] )] };
+    }
+  }
+  if (!confirm(`Advance Noctis from Wizard ${model.character.level} to Wizard ${target}? This updates the Google Sheet.`)) return;
+  const result = await api("/api/level-up", {method:"POST",body:JSON.stringify(body)});
+  model.state = result.state;
+  model.character = result.character;
+  const featResult = await api("/api/feats");
+  featCatalogue = featResult.results || [];
+  renderAll();
+  toast(`Level up complete — Noctis is now Wizard ${result.character.level}`);
 }
 
 async function updateState(patch) {
@@ -431,15 +600,23 @@ document.addEventListener("click", async e => {
     if (action === "cast") await castSpell(index, btn.dataset.castLevel !== undefined ? Number(btn.dataset.castLevel) : undefined);
     if (action === "details") await showDetails(index);
     if (action === "remove-item") { readInventoryDraftFromDom(); inventoryDraft.splice(Number(btn.dataset.row),1); renderInventory(); }
+    if (action === "show-more") { discoverLimit += 24; renderDiscover(); }
   } catch (err) { toast(err.message); }
 });
 
 $("#bookSearch").addEventListener("input",renderSpellbook);
-$("#spellSearch").addEventListener("input",renderDiscover);
-$("#levelFilter").addEventListener("change",renderDiscover);
-$("#schoolFilter").addEventListener("change",renderDiscover);
+$("#spellSearch").addEventListener("input",()=>{discoverLimit=24;renderDiscover();});
+$("#levelFilter").addEventListener("change",()=>{discoverLimit=24;renderDiscover();});
+$("#schoolFilter").addEventListener("change",()=>{discoverLimit=24;renderDiscover();});
+$("#featSearch").addEventListener("input",renderFeats);
 $("#closeDialog").onclick=()=>$("#spellDialog").close();
 $("#closeShortRest").onclick=()=>$("#shortRestDialog").close();
+$("#levelSpell1").addEventListener("change",selectedLevelSpellPreview);
+$("#levelSpell2").addEventListener("change",selectedLevelSpellPreview);
+$("#levelFeat").addEventListener("change",selectedFeatPreview);
+$$("input[name=advancement]").forEach(x=>x.addEventListener("change",updateAdvancementPanels));
+$("#asiMode").addEventListener("change",updateAdvancementPanels);
+$("#commitLevelUp").onclick=()=>commitLevelUp().catch(e=>toast(e.message));
 
 $("#shortRest").onclick=openShortRest;
 $("#confirmShortRest").onclick=()=>takeShortRest(true).catch(e=>toast(e.message));
@@ -463,7 +640,7 @@ $("#saveInventory").onclick=async()=>{
 $("#saveSettings").onclick=async()=>{
   try { await updateState({settings:{...model.state.settings,level:$("#levelSetting").value,intScore:$("#intSetting").value}}); toast("Settings saved"); } catch(e){toast(e.message)}
 };
-$("#syncSheet").onclick=async()=>{try{await api("/api/sync",{method:"POST"});toast("SPELLS and SpellBook rebuilt from companion state");}catch(e){toast(e.message)}};
+$("#syncSheet").onclick=async()=>{try{await api("/api/sync",{method:"POST"});toast("SPELLS, SpellBook and feats rebuilt from companion state");}catch(e){toast(e.message)}};
 $("#logout").onclick=async()=>{await api("/api/logout",{method:"POST"});location.reload();};
 
 $("#loginForm").onsubmit=async e=>{

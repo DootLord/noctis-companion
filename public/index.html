@@ -6,7 +6,7 @@
   <meta name="theme-color" content="#0a0910" />
   <meta name="color-scheme" content="dark" />
   <title>Noctis — Necromancer's Grimoire</title>
-  <link rel="stylesheet" href="/styles.css?v=3" />
+  <link rel="stylesheet" href="/styles.css?v=5" />
 </head>
 <body>
   <div class="ambient ambient-a"></div>
@@ -69,6 +69,7 @@
         <button class="tab" data-tab="spellbook"><span class="tab-icon">▤</span><span>Spellbook</span></button>
         <button class="tab" data-tab="discover"><span class="tab-icon">＋</span><span>Learn Spells</span></button>
         <button class="tab" data-tab="inventory"><span class="tab-icon">◇</span><span>Inventory</span></button>
+        <button class="tab" data-tab="feats"><span class="tab-icon">◆</span><span>Feats</span></button>
         <button class="tab" data-tab="levelup"><span class="tab-icon">↑</span><span>Level Up</span></button>
         <button class="tab" data-tab="settings"><span class="tab-icon">⚙</span><span>Settings</span></button>
       </nav>
@@ -197,9 +198,109 @@
         </div>
       </section>
 
+      <section id="feats" class="view">
+        <div class="page-heading">
+          <div>
+            <div class="eyebrow">CHARACTER OPTIONS · PHB 2014</div>
+            <h2>Feats</h2>
+            <p class="page-lede">See what Noctis has chosen and browse the feat options available when an ASI level arrives.</p>
+          </div>
+          <div class="search-wrap"><span>⌕</span><input id="featSearch" class="search" placeholder="Search feats…" /></div>
+        </div>
+        <div class="feat-layout">
+          <div class="panel owned-feats-panel">
+            <div class="panel-heading compact-heading"><div><span class="panel-kicker">ON YOUR CHARACTER</span><h3>Chosen Feats</h3></div><div class="panel-glyph">◆</div></div>
+            <div id="ownedFeats" class="owned-feats"></div>
+          </div>
+          <div>
+            <div class="info-banner"><span>i</span><p>Wizard ASI levels are 4, 8, 12, 16 and 19. At those levels you can take a feat instead of the normal Ability Score Improvement if your DM is using the optional feat rule.</p></div>
+            <div id="featCatalogue" class="feat-grid"></div>
+          </div>
+        </div>
+      </section>
+
       <section id="levelup" class="view">
-        <div class="page-heading"><div><div class="eyebrow">PROGRESSION</div><h2>What Comes Next?</h2><p class="page-lede">The next milestones for Noctis' Wizard and Necromancer progression.</p></div></div>
-        <div id="levelCards" class="level-grid"></div>
+        <div class="page-heading">
+          <div>
+            <div class="eyebrow">WIZARD PROGRESSION · 2014</div>
+            <h2>Level Up Noctis</h2>
+            <p class="page-lede">A guided level-up that updates the companion and the DM-facing character sheet together.</p>
+          </div>
+          <div id="nextLevelBadge" class="resource-pill"></div>
+        </div>
+
+        <div class="level-up-layout">
+          <div class="panel level-up-wizard">
+            <div class="panel-heading">
+              <div><span class="panel-kicker">NEXT LEVEL</span><h3 id="levelUpTitle">Wizard Level Up</h3></div>
+              <div class="panel-glyph">↑</div>
+            </div>
+
+            <div id="levelMaxNotice" class="notice hidden">Noctis is already Wizard 20.</div>
+            <div id="levelUpForm">
+              <div class="level-step">
+                <div class="step-number">1</div>
+                <div class="step-content">
+                  <h4>Learn two Wizard spells</h4>
+                  <p class="muted compact">Every Wizard level adds two levelled spells to your spellbook. The list only includes spells your new level can support.</p>
+                  <div class="form-grid level-spell-picks">
+                    <label>New spell 1<select id="levelSpell1"></select></label>
+                    <label>New spell 2<select id="levelSpell2"></select></label>
+                  </div>
+                  <div id="levelSpellPreview" class="choice-preview"></div>
+                </div>
+              </div>
+
+              <div id="cantripStep" class="level-step hidden">
+                <div class="step-number">2</div>
+                <div class="step-content">
+                  <h4>Learn a new cantrip</h4>
+                  <p class="muted compact">This level increases the number of Wizard cantrips you know.</p>
+                  <label class="dialog-label">New cantrip<select id="levelCantrip"></select></label>
+                </div>
+              </div>
+
+              <div id="advancementStep" class="level-step hidden">
+                <div class="step-number">3</div>
+                <div class="step-content">
+                  <h4>Feat or Ability Score Improvement</h4>
+                  <p class="muted compact">At Wizard levels 4, 8, 12, 16 and 19 you normally gain an ASI. With the optional feat rule you can take a feat instead.</p>
+                  <div class="choice-toggle">
+                    <label><input type="radio" name="advancement" value="feat" checked /> Take a feat</label>
+                    <label><input type="radio" name="advancement" value="asi" /> Take an ASI</label>
+                  </div>
+                  <div id="featChoicePanel" class="advancement-panel">
+                    <label class="dialog-label">Feat<select id="levelFeat"></select></label>
+                    <label id="featAbilityLabel" class="dialog-label hidden">Ability increased by feat<select id="levelFeatAbility"></select></label>
+                    <label class="dialog-label">Feat choices / notes (optional)<input id="levelFeatNote" placeholder="e.g. Fire, Cleric, chosen skills…" /></label>
+                    <div id="levelFeatPreview" class="choice-preview"></div>
+                  </div>
+                  <div id="asiChoicePanel" class="advancement-panel hidden">
+                    <label class="dialog-label">ASI method<select id="asiMode"><option value="plus2">+2 to one ability</option><option value="split">+1 to two abilities</option></select></label>
+                    <div class="form-grid">
+                      <label>Ability 1<select id="asiAbility1"></select></label>
+                      <label id="asiAbility2Label" class="hidden">Ability 2<select id="asiAbility2"></select></label>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div class="level-up-submit">
+                <div id="levelUpSummary" class="muted compact"></div>
+                <button id="commitLevelUp" class="primary button-lg">Confirm Level Up</button>
+              </div>
+            </div>
+          </div>
+
+          <aside class="panel next-level-panel">
+            <div class="panel-heading compact-heading"><div><span class="panel-kicker">WHAT CHANGES</span><h3>Next-Level Guide</h3></div></div>
+            <div id="nextLevelSummary" class="next-level-summary"></div>
+          </aside>
+        </div>
+
+        <div class="section-divider"></div>
+        <div class="page-heading page-heading-compact"><div><div class="eyebrow">LEVEL 1–20</div><h2>Wizard Roadmap</h2><p class="page-lede">Your class, spell-tier and School of Necromancy milestones at a glance.</p></div></div>
+        <div id="levelCards" class="level-grid progression-grid"></div>
       </section>
 
       <section id="settings" class="view">
@@ -242,6 +343,6 @@
   </dialog>
 
   <div id="toast" class="toast" role="status" aria-live="polite"></div>
-  <script src="/app.js?v=3" defer></script>
+  <script src="/app.js?v=5" defer></script>
 </body>
 </html>
