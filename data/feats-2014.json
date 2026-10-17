@@ -1,44 +1,960 @@
 [
-  {"id":"alert","name":"Alert","summary":"+5 initiative; you cannot be surprised while conscious; hidden attackers do not gain advantage just for being unseen.","prerequisite":null,"abilityIncrease":[]},
-  {"id":"athlete","name":"Athlete","summary":"Improve physical mobility: standing from prone is cheaper, climbing is easier, and running jumps need less run-up.","prerequisite":null,"abilityIncrease":["str","dex"]},
-  {"id":"actor","name":"Actor","summary":"Excel at impersonation and performance; gain advantage when pretending to be someone else and mimic voices or sounds you have studied.","prerequisite":null,"abilityIncrease":["cha"]},
-  {"id":"charger","name":"Charger","summary":"After using Dash, use a bonus action to make a melee attack or shove, with an extra benefit after a straight-line charge.","prerequisite":null,"abilityIncrease":[]},
-  {"id":"crossbow-expert","name":"Crossbow Expert","summary":"Ignore crossbow loading, make ranged attacks normally in melee, and gain a hand-crossbow bonus-action attack after attacking one-handed.","prerequisite":null,"abilityIncrease":[]},
-  {"id":"defensive-duelist","name":"Defensive Duelist","summary":"When wielding a finesse weapon, use your reaction to add proficiency bonus to AC against one melee attack that hits you.","prerequisite":{"ability":"dex","min":13},"abilityIncrease":[]},
-  {"id":"dual-wielder","name":"Dual Wielder","summary":"Better two-weapon fighting: +1 AC while dual-wielding, use non-light one-handed weapons, and draw or stow two weapons together.","prerequisite":null,"abilityIncrease":[]},
-  {"id":"dungeon-delver","name":"Dungeon Delver","summary":"Better at finding and surviving traps and secret doors; resist trap damage and search while travelling at normal pace.","prerequisite":null,"abilityIncrease":[]},
-  {"id":"durable","name":"Durable","summary":"Become tougher and get a better minimum result when spending Hit Dice to regain hit points.","prerequisite":null,"abilityIncrease":["con"]},
-  {"id":"elemental-adept","name":"Elemental Adept","summary":"Choose acid, cold, fire, lightning, or thunder. Your spells ignore resistance to that type and treat damage-die rolls of 1 as 2.","prerequisite":{"spellcasting":true},"abilityIncrease":[],"repeatable":true},
-  {"id":"grappler","name":"Grappler","summary":"Gain advantage on attacks against creatures you grapple and gain an option to restrain both yourself and the grappled creature.","prerequisite":{"ability":"str","min":13},"abilityIncrease":[]},
-  {"id":"great-weapon-master","name":"Great Weapon Master","summary":"Heavy-weapon specialist: gain a bonus attack after a critical hit or dropping a creature, and trade accuracy for major damage.","prerequisite":null,"abilityIncrease":[]},
-  {"id":"healer","name":"Healer","summary":"Use a healer's kit much more effectively, including restoring hit points instead of merely stabilising a dying creature.","prerequisite":null,"abilityIncrease":[]},
-  {"id":"heavily-armored","name":"Heavily Armored","summary":"Gain proficiency with heavy armour.","prerequisite":{"armor":"medium"},"abilityIncrease":["str"]},
-  {"id":"heavy-armor-master","name":"Heavy Armor Master","summary":"While wearing heavy armour, reduce incoming nonmagical bludgeoning, piercing, and slashing damage.","prerequisite":{"armor":"heavy"},"abilityIncrease":["str"]},
-  {"id":"inspiring-leader","name":"Inspiring Leader","summary":"Spend 10 minutes inspiring up to six allies so they gain temporary hit points based on your level and Charisma modifier.","prerequisite":{"ability":"cha","min":13},"abilityIncrease":[]},
-  {"id":"keen-mind","name":"Keen Mind","summary":"Perfectly track direction and time, and accurately recall what you have seen or heard during the past month.","prerequisite":null,"abilityIncrease":["int"]},
-  {"id":"lightly-armored","name":"Lightly Armored","summary":"Gain proficiency with light armour.","prerequisite":null,"abilityIncrease":["str","dex"]},
-  {"id":"linguist","name":"Linguist","summary":"Learn three languages and become skilled at creating written ciphers that others struggle to decipher.","prerequisite":null,"abilityIncrease":["int"]},
-  {"id":"lucky","name":"Lucky","summary":"Gain three luck points per long rest to influence your own attacks, checks, saves, or attacks made against you.","prerequisite":null,"abilityIncrease":[]},
-  {"id":"mage-slayer","name":"Mage Slayer","summary":"Fight spellcasters at close range: punish nearby casting, disrupt concentration more effectively, and resist nearby spells better.","prerequisite":null,"abilityIncrease":[]},
-  {"id":"magic-initiate","name":"Magic Initiate","summary":"Learn two cantrips and one 1st-level spell from another spellcasting class; cast the 1st-level spell once per long rest.","prerequisite":null,"abilityIncrease":[]},
-  {"id":"martial-adept","name":"Martial Adept","summary":"Learn two Battle Master manoeuvres and gain one superiority die to fuel them, refreshed on a short or long rest.","prerequisite":null,"abilityIncrease":[]},
-  {"id":"medium-armor-master","name":"Medium Armor Master","summary":"Use medium armour more efficiently: remove its Stealth penalty and allow up to +3 Dexterity to AC.","prerequisite":{"armor":"medium"},"abilityIncrease":[]},
-  {"id":"mobile","name":"Mobile","summary":"Increase speed, Dash through difficult terrain more easily, and avoid opportunity attacks from creatures you attack in melee.","prerequisite":null,"abilityIncrease":[]},
-  {"id":"moderately-armored","name":"Moderately Armored","summary":"Gain proficiency with medium armour and shields.","prerequisite":{"armor":"light"},"abilityIncrease":["str","dex"]},
-  {"id":"mounted-combatant","name":"Mounted Combatant","summary":"Become more dangerous and protective while mounted, including advantage against smaller unmounted foes and ways to protect your mount.","prerequisite":null,"abilityIncrease":[]},
-  {"id":"observant","name":"Observant","summary":"Read lips when you can see a speaker and gain +5 to passive Perception and passive Investigation.","prerequisite":null,"abilityIncrease":["int","wis"]},
-  {"id":"polearm-master","name":"Polearm Master","summary":"Gain a bonus-action butt-end attack with certain polearms and trigger opportunity attacks when enemies enter your reach.","prerequisite":null,"abilityIncrease":[]},
-  {"id":"resilient","name":"Resilient","summary":"Increase one ability score by 1 and gain proficiency in saving throws using that ability.","prerequisite":null,"abilityIncrease":["str","dex","con","int","wis","cha"]},
-  {"id":"ritual-caster","name":"Ritual Caster","summary":"Gain a ritual book with two 1st-level ritual spells from a chosen class and copy more qualifying rituals into it later.","prerequisite":{"anyAbility":{"abilities":["int","wis"],"min":13}},"abilityIncrease":[]},
-  {"id":"savage-attacker","name":"Savage Attacker","summary":"Once per turn when rolling melee-weapon damage, reroll the weapon's damage dice and use either result.","prerequisite":null,"abilityIncrease":[]},
-  {"id":"sentinel","name":"Sentinel","summary":"Lock enemies down with opportunity attacks and punish foes who attack nearby allies instead of you.","prerequisite":null,"abilityIncrease":[]},
-  {"id":"sharpshooter","name":"Sharpshooter","summary":"Ignore long-range disadvantage and most cover with ranged weapons, and trade accuracy for a large damage bonus.","prerequisite":null,"abilityIncrease":[]},
-  {"id":"shield-master","name":"Shield Master","summary":"Turn a shield into an active combat tool: shove after attacking, improve some Dexterity saves, and potentially negate certain area damage.","prerequisite":null,"abilityIncrease":[]},
-  {"id":"skilled","name":"Skilled","summary":"Gain proficiency in any combination of three skills or tools.","prerequisite":null,"abilityIncrease":[]},
-  {"id":"skulker","name":"Skulker","summary":"Hide more effectively in dim conditions, missing with a ranged attack does not automatically reveal you, and dim light does not hinder Perception as much.","prerequisite":{"ability":"dex","min":13},"abilityIncrease":[]},
-  {"id":"spell-sniper","name":"Spell Sniper","summary":"Double the range of attack-roll spells, ignore half and three-quarters cover with them, and learn one attack cantrip from a spellcasting class.","prerequisite":{"spellcasting":true},"abilityIncrease":[]},
-  {"id":"tavern-brawler","name":"Tavern Brawler","summary":"Become proficient with improvised weapons, improve unarmed damage, and grapple as a bonus action after hitting with an unarmed strike or improvised weapon.","prerequisite":null,"abilityIncrease":["str","con"]},
-  {"id":"tough","name":"Tough","summary":"Your hit-point maximum increases by 2 per character level, including retroactively for levels you already have.","prerequisite":null,"abilityIncrease":[]},
-  {"id":"war-caster","name":"War Caster","summary":"Gain advantage on Constitution saves to maintain concentration, cast with occupied hands, and use certain spells for opportunity attacks.","prerequisite":{"spellcasting":true},"abilityIncrease":[]},
-  {"id":"weapon-master","name":"Weapon Master","summary":"Gain proficiency with four weapons of your choice.","prerequisite":null,"abilityIncrease":["str","dex"]}
+  {
+    "id": "actor",
+    "name": "Actor",
+    "summary": "Excel at impersonation and performance; gain advantage when pretending to be someone else and mimic voices or sounds you have studied.",
+    "prerequisite": null,
+    "abilityIncrease": [
+      "cha"
+    ]
+  },
+  {
+    "id": "alert",
+    "name": "Alert",
+    "summary": "+5 initiative; you cannot be surprised while conscious; hidden attackers do not gain advantage just for being unseen.",
+    "prerequisite": null,
+    "abilityIncrease": []
+  },
+  {
+    "id": "athlete",
+    "name": "Athlete",
+    "summary": "Improve physical mobility: standing from prone is cheaper, climbing is easier, and running jumps need less run-up.",
+    "prerequisite": null,
+    "abilityIncrease": [
+      "str",
+      "dex"
+    ]
+  },
+  {
+    "id": "charger",
+    "name": "Charger",
+    "summary": "After using Dash, use a bonus action to make a melee attack or shove, with an extra benefit after a straight-line charge.",
+    "prerequisite": null,
+    "abilityIncrease": []
+  },
+  {
+    "id": "crossbow-expert",
+    "name": "Crossbow Expert",
+    "summary": "Ignore crossbow loading, make ranged attacks normally in melee, and gain a hand-crossbow bonus-action attack after attacking one-handed.",
+    "prerequisite": null,
+    "abilityIncrease": []
+  },
+  {
+    "id": "defensive-duelist",
+    "name": "Defensive Duelist",
+    "summary": "When wielding a finesse weapon, use your reaction to add proficiency bonus to AC against one melee attack that hits you.",
+    "prerequisite": {
+      "ability": "dex",
+      "min": 13
+    },
+    "abilityIncrease": []
+  },
+  {
+    "id": "dual-wielder",
+    "name": "Dual Wielder",
+    "summary": "Better two-weapon fighting: +1 AC while dual-wielding, use non-light one-handed weapons, and draw or stow two weapons together.",
+    "prerequisite": null,
+    "abilityIncrease": []
+  },
+  {
+    "id": "dungeon-delver",
+    "name": "Dungeon Delver",
+    "summary": "Better at finding and surviving traps and secret doors; resist trap damage and search while travelling at normal pace.",
+    "prerequisite": null,
+    "abilityIncrease": []
+  },
+  {
+    "id": "durable",
+    "name": "Durable",
+    "summary": "Become tougher and get a better minimum result when spending Hit Dice to regain hit points.",
+    "prerequisite": null,
+    "abilityIncrease": [
+      "con"
+    ]
+  },
+  {
+    "id": "elemental-adept",
+    "name": "Elemental Adept",
+    "summary": "Choose acid, cold, fire, lightning, or thunder. Your spells ignore resistance to that type and treat damage-die rolls of 1 as 2.",
+    "prerequisite": {
+      "spellcasting": true
+    },
+    "abilityIncrease": [],
+    "repeatable": true
+  },
+  {
+    "id": "grappler",
+    "name": "Grappler",
+    "summary": "Gain advantage on attacks against creatures you grapple and gain an option to restrain both yourself and the grappled creature.",
+    "prerequisite": {
+      "ability": "str",
+      "min": 13
+    },
+    "abilityIncrease": []
+  },
+  {
+    "id": "great-weapon-master",
+    "name": "Great Weapon Master",
+    "summary": "Heavy-weapon specialist: gain a bonus attack after a critical hit or dropping a creature, and trade accuracy for major damage.",
+    "prerequisite": null,
+    "abilityIncrease": []
+  },
+  {
+    "id": "healer",
+    "name": "Healer",
+    "summary": "Use a healer's kit much more effectively, including restoring hit points instead of merely stabilising a dying creature.",
+    "prerequisite": null,
+    "abilityIncrease": []
+  },
+  {
+    "id": "heavily-armored",
+    "name": "Heavily Armored",
+    "summary": "Gain proficiency with heavy armour.",
+    "prerequisite": {
+      "armor": "medium"
+    },
+    "abilityIncrease": [
+      "str"
+    ]
+  },
+  {
+    "id": "heavy-armor-master",
+    "name": "Heavy Armor Master",
+    "summary": "While wearing heavy armour, reduce incoming nonmagical bludgeoning, piercing, and slashing damage.",
+    "prerequisite": {
+      "armor": "heavy"
+    },
+    "abilityIncrease": [
+      "str"
+    ]
+  },
+  {
+    "id": "inspiring-leader",
+    "name": "Inspiring Leader",
+    "summary": "Spend 10 minutes inspiring up to six allies so they gain temporary hit points based on your level and Charisma modifier.",
+    "prerequisite": {
+      "ability": "cha",
+      "min": 13
+    },
+    "abilityIncrease": []
+  },
+  {
+    "id": "keen-mind",
+    "name": "Keen Mind",
+    "summary": "Perfectly track direction and time, and accurately recall what you have seen or heard during the past month.",
+    "prerequisite": null,
+    "abilityIncrease": [
+      "int"
+    ]
+  },
+  {
+    "id": "lightly-armored",
+    "name": "Lightly Armored",
+    "summary": "Gain proficiency with light armour.",
+    "prerequisite": null,
+    "abilityIncrease": [
+      "str",
+      "dex"
+    ]
+  },
+  {
+    "id": "linguist",
+    "name": "Linguist",
+    "summary": "Learn three languages and become skilled at creating written ciphers that others struggle to decipher.",
+    "prerequisite": null,
+    "abilityIncrease": [
+      "int"
+    ]
+  },
+  {
+    "id": "lucky",
+    "name": "Lucky",
+    "summary": "Gain three luck points per long rest to influence your own attacks, checks, saves, or attacks made against you.",
+    "prerequisite": null,
+    "abilityIncrease": []
+  },
+  {
+    "id": "mage-slayer",
+    "name": "Mage Slayer",
+    "summary": "Fight spellcasters at close range: punish nearby casting, disrupt concentration more effectively, and resist nearby spells better.",
+    "prerequisite": null,
+    "abilityIncrease": []
+  },
+  {
+    "id": "magic-initiate",
+    "name": "Magic Initiate",
+    "summary": "Learn two cantrips and one 1st-level spell from another spellcasting class; cast the 1st-level spell once per long rest.",
+    "prerequisite": null,
+    "abilityIncrease": []
+  },
+  {
+    "id": "martial-adept",
+    "name": "Martial Adept",
+    "summary": "Learn two Battle Master manoeuvres and gain one superiority die to fuel them, refreshed on a short or long rest.",
+    "prerequisite": null,
+    "abilityIncrease": []
+  },
+  {
+    "id": "medium-armor-master",
+    "name": "Medium Armor Master",
+    "summary": "Use medium armour more efficiently: remove its Stealth penalty and allow up to +3 Dexterity to AC.",
+    "prerequisite": {
+      "armor": "medium"
+    },
+    "abilityIncrease": []
+  },
+  {
+    "id": "mobile",
+    "name": "Mobile",
+    "summary": "Increase speed, Dash through difficult terrain more easily, and avoid opportunity attacks from creatures you attack in melee.",
+    "prerequisite": null,
+    "abilityIncrease": []
+  },
+  {
+    "id": "moderately-armored",
+    "name": "Moderately Armored",
+    "summary": "Gain proficiency with medium armour and shields.",
+    "prerequisite": {
+      "armor": "light"
+    },
+    "abilityIncrease": [
+      "str",
+      "dex"
+    ]
+  },
+  {
+    "id": "mounted-combatant",
+    "name": "Mounted Combatant",
+    "summary": "Become more dangerous and protective while mounted, including advantage against smaller unmounted foes and ways to protect your mount.",
+    "prerequisite": null,
+    "abilityIncrease": []
+  },
+  {
+    "id": "observant",
+    "name": "Observant",
+    "summary": "Read lips when you can see a speaker and gain +5 to passive Perception and passive Investigation.",
+    "prerequisite": null,
+    "abilityIncrease": [
+      "int",
+      "wis"
+    ]
+  },
+  {
+    "id": "polearm-master",
+    "name": "Polearm Master",
+    "summary": "Gain a bonus-action butt-end attack with certain polearms and trigger opportunity attacks when enemies enter your reach.",
+    "prerequisite": null,
+    "abilityIncrease": []
+  },
+  {
+    "id": "resilient",
+    "name": "Resilient",
+    "summary": "Increase one ability score by 1 and gain proficiency in saving throws using that ability.",
+    "prerequisite": null,
+    "abilityIncrease": [
+      "str",
+      "dex",
+      "con",
+      "int",
+      "wis",
+      "cha"
+    ]
+  },
+  {
+    "id": "ritual-caster",
+    "name": "Ritual Caster",
+    "summary": "Gain a ritual book with two 1st-level ritual spells from a chosen class and copy more qualifying rituals into it later.",
+    "prerequisite": {
+      "anyAbility": {
+        "abilities": [
+          "int",
+          "wis"
+        ],
+        "min": 13
+      }
+    },
+    "abilityIncrease": []
+  },
+  {
+    "id": "savage-attacker",
+    "name": "Savage Attacker",
+    "summary": "Once per turn when rolling melee-weapon damage, reroll the weapon's damage dice and use either result.",
+    "prerequisite": null,
+    "abilityIncrease": []
+  },
+  {
+    "id": "sentinel",
+    "name": "Sentinel",
+    "summary": "Lock enemies down with opportunity attacks and punish foes who attack nearby allies instead of you.",
+    "prerequisite": null,
+    "abilityIncrease": []
+  },
+  {
+    "id": "sharpshooter",
+    "name": "Sharpshooter",
+    "summary": "Ignore long-range disadvantage and most cover with ranged weapons, and trade accuracy for a large damage bonus.",
+    "prerequisite": null,
+    "abilityIncrease": []
+  },
+  {
+    "id": "shield-master",
+    "name": "Shield Master",
+    "summary": "Turn a shield into an active combat tool: shove after attacking, improve some Dexterity saves, and potentially negate certain area damage.",
+    "prerequisite": null,
+    "abilityIncrease": []
+  },
+  {
+    "id": "skilled",
+    "name": "Skilled",
+    "summary": "Gain proficiency in any combination of three skills or tools.",
+    "prerequisite": null,
+    "abilityIncrease": []
+  },
+  {
+    "id": "skulker",
+    "name": "Skulker",
+    "summary": "Hide more effectively in dim conditions, missing with a ranged attack does not automatically reveal you, and dim light does not hinder Perception as much.",
+    "prerequisite": {
+      "ability": "dex",
+      "min": 13
+    },
+    "abilityIncrease": []
+  },
+  {
+    "id": "spell-sniper",
+    "name": "Spell Sniper",
+    "summary": "Double the range of attack-roll spells, ignore half and three-quarters cover with them, and learn one attack cantrip from a spellcasting class.",
+    "prerequisite": {
+      "spellcasting": true
+    },
+    "abilityIncrease": []
+  },
+  {
+    "id": "tavern-brawler",
+    "name": "Tavern Brawler",
+    "summary": "Become proficient with improvised weapons, improve unarmed damage, and grapple as a bonus action after hitting with an unarmed strike or improvised weapon.",
+    "prerequisite": null,
+    "abilityIncrease": [
+      "str",
+      "con"
+    ]
+  },
+  {
+    "id": "tough",
+    "name": "Tough",
+    "summary": "Your hit-point maximum increases by 2 per character level, including retroactively for levels you already have.",
+    "prerequisite": null,
+    "abilityIncrease": []
+  },
+  {
+    "id": "war-caster",
+    "name": "War Caster",
+    "summary": "Gain advantage on Constitution saves to maintain concentration, cast with occupied hands, and use certain spells for opportunity attacks.",
+    "prerequisite": {
+      "spellcasting": true
+    },
+    "abilityIncrease": []
+  },
+  {
+    "id": "weapon-master",
+    "name": "Weapon Master",
+    "summary": "Gain proficiency with four weapons of your choice.",
+    "prerequisite": null,
+    "abilityIncrease": [
+      "str",
+      "dex"
+    ]
+  },
+  {
+    "id": "ryoko-adaptive-colouration",
+    "name": "Adaptive Colouration",
+    "summary": "Gain advantage on Stealth checks made to avoid being seen and broaden which koi-dragon colour can empower your Tatsumi racial abilities.",
+    "prerequisite": {
+      "race": "Tatsumi"
+    },
+    "prerequisiteText": "Tatsumi only.",
+    "abilityIncrease": [],
+    "repeatable": false,
+    "category": "racial",
+    "source": "Ryoko's Guide to the Yokai Realms v0.90",
+    "sourceShort": "RYOKO v0.90"
+  },
+  {
+    "id": "ryoko-boon-of-ashura",
+    "name": "Boon of Ashura",
+    "summary": "Increase Strength or Constitution by 1. You can occasionally take an additional reaction in a round, while still being limited to one reaction on any single turn. Uses refresh on a long rest.",
+    "prerequisite": null,
+    "prerequisiteText": null,
+    "abilityIncrease": [
+      "str",
+      "con"
+    ],
+    "repeatable": false,
+    "category": "general",
+    "source": "Ryoko's Guide to the Yokai Realms v0.90",
+    "sourceShort": "RYOKO v0.90"
+  },
+  {
+    "id": "ryoko-boon-of-the-jorogumo",
+    "name": "Boon of the Jorōgumo",
+    "summary": "Gain proficiency in Deception or Persuasion, cast disguise self several times per long rest, climb at your walking speed including walls and ceilings with your hands free, and ignore difficult terrain caused by webbing.",
+    "prerequisite": null,
+    "prerequisiteText": null,
+    "abilityIncrease": [],
+    "repeatable": false,
+    "category": "general",
+    "source": "Ryoko's Guide to the Yokai Realms v0.90",
+    "sourceShort": "RYOKO v0.90"
+  },
+  {
+    "id": "ryoko-boon-of-the-komainu",
+    "name": "Boon of the Komainu",
+    "summary": "Manifest a radiant mane that harms creatures you grapple, and temporarily harden your body to gain AC and stronger Constitution saves at the cost of weaker Dexterity saves. The stone defence has proficiency-bonus uses per long rest.",
+    "prerequisite": null,
+    "prerequisiteText": null,
+    "abilityIncrease": [],
+    "repeatable": false,
+    "category": "general",
+    "source": "Ryoko's Guide to the Yokai Realms v0.90",
+    "sourceShort": "RYOKO v0.90"
+  },
+  {
+    "id": "ryoko-boon-of-the-nue",
+    "name": "Boon of the Nue",
+    "summary": "Gamble on chaotic power for a temporary bonus or a small amount of unavoidable poison damage, and briefly gain a flying speed equal to your walking speed. Both benefits have proficiency-bonus uses and refresh on a short or long rest.",
+    "prerequisite": null,
+    "prerequisiteText": null,
+    "abilityIncrease": [],
+    "repeatable": false,
+    "category": "general",
+    "source": "Ryoko's Guide to the Yokai Realms v0.90",
+    "sourceShort": "RYOKO v0.90"
+  },
+  {
+    "id": "ryoko-boon-of-the-wanyudo",
+    "name": "Boon of the Wanyūdō",
+    "summary": "Increase your speed by 10 feet, stand from prone for only 5 feet of movement, and perform a charging slam that can knock either you or the target prone. The slam refreshes on a short or long rest.",
+    "prerequisite": null,
+    "prerequisiteText": null,
+    "abilityIncrease": [],
+    "repeatable": false,
+    "category": "general",
+    "source": "Ryoko's Guide to the Yokai Realms v0.90",
+    "sourceShort": "RYOKO v0.90"
+  },
+  {
+    "id": "ryoko-boon-of-the-omukade",
+    "name": "Boon of the Ōmukade",
+    "summary": "Increase Constitution by 1 and choose an elemental damage type. You gain resistance to that type and can react to taking it to empower your next damage roll, with proficiency-bonus uses per long rest.",
+    "prerequisite": null,
+    "prerequisiteText": null,
+    "abilityIncrease": [
+      "con"
+    ],
+    "repeatable": false,
+    "category": "general",
+    "source": "Ryoko's Guide to the Yokai Realms v0.90",
+    "sourceShort": "RYOKO v0.90"
+  },
+  {
+    "id": "ryoko-cantrip-combatant",
+    "name": "Cantrip Combatant",
+    "summary": "Increase any ability by 1. After casting a cantrip that includes an unarmed strike or melee weapon attack, you can make one weapon attack as a bonus action.",
+    "prerequisite": {
+      "extraAttack": true,
+      "cantrip": true
+    },
+    "prerequisiteText": "Requires Extra Attack and the ability to cast at least one cantrip.",
+    "abilityIncrease": [
+      "str",
+      "dex",
+      "con",
+      "int",
+      "wis",
+      "cha"
+    ],
+    "repeatable": false,
+    "category": "general",
+    "source": "Ryoko's Guide to the Yokai Realms v0.90",
+    "sourceShort": "RYOKO v0.90"
+  },
+  {
+    "id": "ryoko-combo-striker",
+    "name": "Combo Striker",
+    "summary": "Increase any ability by 1 and gain extra flexibility with Ryoko’s combo-attack system, letting you collaborate in or initiate an additional combo between long rests.",
+    "prerequisite": null,
+    "prerequisiteText": null,
+    "abilityIncrease": [
+      "str",
+      "dex",
+      "con",
+      "int",
+      "wis",
+      "cha"
+    ],
+    "repeatable": false,
+    "category": "general",
+    "source": "Ryoko's Guide to the Yokai Realms v0.90",
+    "sourceShort": "RYOKO v0.90"
+  },
+  {
+    "id": "ryoko-dedicated-combatant",
+    "name": "Dedicated Combatant",
+    "summary": "Your advanced-weapon-mastery martial level treats half-martial class levels as full levels and non-martial class levels as half levels.",
+    "prerequisite": null,
+    "prerequisiteText": null,
+    "abilityIncrease": [],
+    "repeatable": false,
+    "category": "general",
+    "source": "Ryoko's Guide to the Yokai Realms v0.90",
+    "sourceShort": "RYOKO v0.90"
+  },
+  {
+    "id": "ryoko-double-throw",
+    "name": "Double Throw",
+    "summary": "Increase Strength or Dexterity by 1. Once per turn, a Light and Thrown weapon attack can become two separate throws made at disadvantage, with advantage cancelling that penalty.",
+    "prerequisite": null,
+    "prerequisiteText": null,
+    "abilityIncrease": [
+      "str",
+      "dex"
+    ],
+    "repeatable": false,
+    "category": "general",
+    "source": "Ryoko's Guide to the Yokai Realms v0.90",
+    "sourceShort": "RYOKO v0.90"
+  },
+  {
+    "id": "ryoko-draconic-fury",
+    "name": "Draconic Fury",
+    "summary": "Increase Constitution by 1 and turn Heartening Breath into an optional damaging cone whose elemental damage scales with level.",
+    "prerequisite": {
+      "race": "Tatsumi"
+    },
+    "prerequisiteText": "Tatsumi (Ryūjin) only.",
+    "abilityIncrease": [
+      "con"
+    ],
+    "repeatable": false,
+    "category": "racial",
+    "source": "Ryoko's Guide to the Yokai Realms v0.90",
+    "sourceShort": "RYOKO v0.90"
+  },
+  {
+    "id": "ryoko-elemental-fighting",
+    "name": "Elemental Fighting",
+    "summary": "Choose acid, cold, fire, lightning, or thunder. Your unarmed strikes can deal 1d8 + Strength modifier damage of that type and ignore resistance to that damage.",
+    "prerequisite": null,
+    "prerequisiteText": null,
+    "abilityIncrease": [],
+    "repeatable": false,
+    "category": "general",
+    "source": "Ryoko's Guide to the Yokai Realms v0.90",
+    "sourceShort": "RYOKO v0.90"
+  },
+  {
+    "id": "ryoko-elemental-initiate",
+    "name": "Elemental Initiate",
+    "summary": "Choose air, earth, fire, or water. Learn one cantrip and one 1st-level spell from that element, gain one free casting of the 1st-level spell per long rest, and gain a reactive resistance tied to the chosen element. Can be taken more than once.",
+    "prerequisite": null,
+    "prerequisiteText": null,
+    "abilityIncrease": [],
+    "repeatable": true,
+    "category": "general",
+    "source": "Ryoko's Guide to the Yokai Realms v0.90",
+    "sourceShort": "RYOKO v0.90"
+  },
+  {
+    "id": "ryoko-enkohs-might",
+    "name": "Enkoh’s Might",
+    "summary": "Increase Strength by 1 and gain a proficiency-bonus-limited bonus-action shove that can push a creature farther than a normal shove.",
+    "prerequisite": {
+      "race": "Enkoh"
+    },
+    "prerequisiteText": "Enkoh (hulking) only.",
+    "abilityIncrease": [
+      "str"
+    ],
+    "repeatable": false,
+    "category": "racial",
+    "source": "Ryoko's Guide to the Yokai Realms v0.90",
+    "sourceShort": "RYOKO v0.90"
+  },
+  {
+    "id": "ryoko-extra-attack-tactician",
+    "name": "Extra Attack Tactician",
+    "summary": "Increase Strength or Dexterity by 1 and borrow the 7th-level Improved Extra Attack benefit of a chosen martial class for a limited number of uses each long rest.",
+    "prerequisite": {
+      "improvedExtraAttack": true
+    },
+    "prerequisiteText": "Requires the Improved Extra Attack feature.",
+    "abilityIncrease": [
+      "str",
+      "dex"
+    ],
+    "repeatable": true,
+    "category": "general",
+    "source": "Ryoko's Guide to the Yokai Realms v0.90",
+    "sourceShort": "RYOKO v0.90"
+  },
+  {
+    "id": "ryoko-fearsome-flourisher",
+    "name": "Fearsome Flourisher",
+    "summary": "While fighting with nunchaku, gain a bonus-action follow-up attack and an intimidating flourish that can frighten a nearby creature.",
+    "prerequisite": {
+      "weaponProficiency": "nunchaku"
+    },
+    "prerequisiteText": "Requires proficiency with nunchaku.",
+    "abilityIncrease": [],
+    "repeatable": false,
+    "category": "general",
+    "source": "Ryoko's Guide to the Yokai Realms v0.90",
+    "sourceShort": "RYOKO v0.90"
+  },
+  {
+    "id": "ryoko-focused-discipline",
+    "name": "Focused Discipline",
+    "summary": "Double proficiency for one class-granted skill and treat rolls of 9 or lower as 10 on one class-granted saving throw proficiency.",
+    "prerequisite": {
+      "level": 4,
+      "singleClass": true
+    },
+    "prerequisiteText": "Requires 4th level and a single-class character.",
+    "abilityIncrease": [],
+    "repeatable": false,
+    "category": "general",
+    "source": "Ryoko's Guide to the Yokai Realms v0.90",
+    "sourceShort": "RYOKO v0.90"
+  },
+  {
+    "id": "ryoko-gift-of-the-lion-turtle",
+    "name": "Gift of the Lion Turtle",
+    "summary": "Increase any ability by 1 and gain slot-free castings of detect thoughts and suggestion once each per long rest, while also allowing them to use your normal spell slots.",
+    "prerequisite": {
+      "race": "Ryokido"
+    },
+    "prerequisiteText": "Ryokido only.",
+    "abilityIncrease": [
+      "str",
+      "dex",
+      "con",
+      "int",
+      "wis",
+      "cha"
+    ],
+    "repeatable": false,
+    "category": "racial",
+    "source": "Ryoko's Guide to the Yokai Realms v0.90",
+    "sourceShort": "RYOKO v0.90"
+  },
+  {
+    "id": "ryoko-hanamori-physiology",
+    "name": "Hanamori Physiology",
+    "summary": "Better resist environmental exhaustion and react to elemental damage to gain resistance to that type through the end of your next turn, with proficiency-bonus uses per long rest.",
+    "prerequisite": {
+      "race": "Hanamori"
+    },
+    "prerequisiteText": "Hanamori only.",
+    "abilityIncrease": [],
+    "repeatable": false,
+    "category": "racial",
+    "source": "Ryoko's Guide to the Yokai Realms v0.90",
+    "sourceShort": "RYOKO v0.90"
+  },
+  {
+    "id": "ryoko-haniwa-soulbinding",
+    "name": "Haniwa Soulbinding",
+    "summary": "Your Clay Companion can use stronger animal forms, with additional forms becoming available from 5th level.",
+    "prerequisite": {
+      "race": "Haniwa"
+    },
+    "prerequisiteText": "Haniwa only.",
+    "abilityIncrease": [],
+    "repeatable": false,
+    "category": "racial",
+    "source": "Ryoko's Guide to the Yokai Realms v0.90",
+    "sourceShort": "RYOKO v0.90"
+  },
+  {
+    "id": "ryoko-isetsu-magic",
+    "name": "Isetsu Magic",
+    "summary": "Increase any ability by 1, learn water whip, and gain free daily castings of riptide and water breathing while also being able to cast them with spell slots.",
+    "prerequisite": {
+      "race": "Isetsu"
+    },
+    "prerequisiteText": "Isetsu only.",
+    "abilityIncrease": [
+      "str",
+      "dex",
+      "con",
+      "int",
+      "wis",
+      "cha"
+    ],
+    "repeatable": false,
+    "category": "racial",
+    "source": "Ryoko's Guide to the Yokai Realms v0.90",
+    "sourceShort": "RYOKO v0.90"
+  },
+  {
+    "id": "ryoko-kaiju-hunter",
+    "name": "Kaiju Hunter",
+    "summary": "Mount and brace on enormous creatures using only 5 feet of movement, identify vulnerable areas more reliably, move over giant creatures without their difficult terrain, and counterattack very large foes with your reaction.",
+    "prerequisite": null,
+    "prerequisiteText": null,
+    "abilityIncrease": [],
+    "repeatable": false,
+    "category": "general",
+    "source": "Ryoko's Guide to the Yokai Realms v0.90",
+    "sourceShort": "RYOKO v0.90"
+  },
+  {
+    "id": "ryoko-karasu-trickery",
+    "name": "Karasu Trickery",
+    "summary": "Increase Charisma by 1 and occasionally swap your d20 result with another creature when you both make an ability check or saving throw at the same time.",
+    "prerequisite": {
+      "race": "Tengu"
+    },
+    "prerequisiteText": "Tengu (karasu) only.",
+    "abilityIncrease": [
+      "cha"
+    ],
+    "repeatable": false,
+    "category": "racial",
+    "source": "Ryoko's Guide to the Yokai Realms v0.90",
+    "sourceShort": "RYOKO v0.90"
+  },
+  {
+    "id": "ryoko-kitsunes-blessing",
+    "name": "Kitsune’s Blessing",
+    "summary": "Enhance your fox transformation: cast spells without ordinary material components, gain a damaging bite, Multiattack, and a better transformed AC.",
+    "prerequisite": {
+      "race": "Kitsune"
+    },
+    "prerequisiteText": "Kitsune only.",
+    "abilityIncrease": [],
+    "repeatable": false,
+    "category": "racial",
+    "source": "Ryoko's Guide to the Yokai Realms v0.90",
+    "sourceShort": "RYOKO v0.90"
+  },
+  {
+    "id": "ryoko-kusarigama-master",
+    "name": "Kusarigama Master",
+    "summary": "Improve the kusarigama counterweight and trade its damage for disarming, knocking prone, pulling, or grappling a Medium or smaller target.",
+    "prerequisite": {
+      "weaponProficiency": "kusarigama"
+    },
+    "prerequisiteText": "Requires proficiency with kusarigama.",
+    "abilityIncrease": [],
+    "repeatable": false,
+    "category": "general",
+    "source": "Ryoko's Guide to the Yokai Realms v0.90",
+    "sourceShort": "RYOKO v0.90"
+  },
+  {
+    "id": "ryoko-magic-of-the-blade",
+    "name": "Magic of the Blade",
+    "summary": "Increase any ability by 1 and learn two cantrips that include an unarmed strike or melee weapon attack as part of the casting. Choose Intelligence, Wisdom, or Charisma as their spellcasting ability.",
+    "prerequisite": null,
+    "prerequisiteText": null,
+    "abilityIncrease": [
+      "str",
+      "dex",
+      "con",
+      "int",
+      "wis",
+      "cha"
+    ],
+    "repeatable": false,
+    "category": "general",
+    "source": "Ryoko's Guide to the Yokai Realms v0.90",
+    "sourceShort": "RYOKO v0.90"
+  },
+  {
+    "id": "ryoko-martial-initiate",
+    "name": "Martial Initiate",
+    "summary": "Increase any ability by 1 and learn two tier-1 advanced weapon techniques for which you meet the prerequisites.",
+    "prerequisite": {
+      "level": 4
+    },
+    "prerequisiteText": "Requires 4th level.",
+    "abilityIncrease": [
+      "str",
+      "dex",
+      "con",
+      "int",
+      "wis",
+      "cha"
+    ],
+    "repeatable": false,
+    "category": "general",
+    "source": "Ryoko's Guide to the Yokai Realms v0.90",
+    "sourceShort": "RYOKO v0.90"
+  },
+  {
+    "id": "ryoko-multidisciplinary",
+    "name": "Multidisciplinary",
+    "summary": "Each time you take this feat or gain your first level in a new class, gain either a skill plus artisan-tool proficiency or a saving-throw proficiency offered by the new class.",
+    "prerequisite": {
+      "multiclass": true
+    },
+    "prerequisiteText": "Requires a multiclass character.",
+    "abilityIncrease": [],
+    "repeatable": false,
+    "category": "general",
+    "source": "Ryoko's Guide to the Yokai Realms v0.90",
+    "sourceShort": "RYOKO v0.90"
+  },
+  {
+    "id": "ryoko-oni-regeneration",
+    "name": "Oni Regeneration",
+    "summary": "Increase Constitution by 1 and react to damage by spending Hit Dice to heal yourself, with proficiency-bonus uses per long rest.",
+    "prerequisite": {
+      "race": "Oniborne"
+    },
+    "prerequisiteText": "Oniborne only.",
+    "abilityIncrease": [
+      "con"
+    ],
+    "repeatable": false,
+    "category": "racial",
+    "source": "Ryoko's Guide to the Yokai Realms v0.90",
+    "sourceShort": "RYOKO v0.90"
+  },
+  {
+    "id": "ryoko-prosthesis-adept",
+    "name": "Prosthesis Adept",
+    "summary": "During a rest, modify a prosthesis with one specialised property such as Blast, Hookshot, Integrated, Launch, Melee, or Mobility; the modification lasts until you reconfigure it.",
+    "prerequisite": null,
+    "prerequisiteText": null,
+    "abilityIncrease": [],
+    "repeatable": false,
+    "category": "general",
+    "source": "Ryoko's Guide to the Yokai Realms v0.90",
+    "sourceShort": "RYOKO v0.90"
+  },
+  {
+    "id": "ryoko-prosthesis-fighting",
+    "name": "Prosthesis Fighting",
+    "summary": "Extend the ranges and reach of prosthesis attacks and deal one extra damage die with their Blast, Launch, or Melee properties.",
+    "prerequisite": null,
+    "prerequisiteText": null,
+    "abilityIncrease": [],
+    "repeatable": false,
+    "category": "general",
+    "source": "Ryoko's Guide to the Yokai Realms v0.90",
+    "sourceShort": "RYOKO v0.90"
+  },
+  {
+    "id": "ryoko-prosthesis-master",
+    "name": "Prosthesis Master",
+    "summary": "Become proficient with attacks made using prostheses and attune to one magical prosthesis without using one of your normal attunement slots.",
+    "prerequisite": {
+      "level": 8
+    },
+    "prerequisiteText": "Requires 8th level.",
+    "abilityIncrease": [],
+    "repeatable": false,
+    "category": "general",
+    "source": "Ryoko's Guide to the Yokai Realms v0.90",
+    "sourceShort": "RYOKO v0.90"
+  },
+  {
+    "id": "ryoko-seasonal-determinism",
+    "name": "Seasonal Determinism",
+    "summary": "Choose the season tied to your Fuyōren birth. Spring, Summer, Autumn, or Winter grants a different +1 ability increase and a matching movement, luck, stealth, or cold-magic benefit.",
+    "prerequisite": {
+      "race": "Fuyōren"
+    },
+    "prerequisiteText": "Fuyōren only.",
+    "abilityIncrease": [
+      "dex",
+      "cha",
+      "wis",
+      "con"
+    ],
+    "repeatable": false,
+    "category": "racial",
+    "source": "Ryoko's Guide to the Yokai Realms v0.90",
+    "sourceShort": "RYOKO v0.90"
+  },
+  {
+    "id": "ryoko-shadowmage",
+    "name": "Shadowmage",
+    "summary": "Increase Intelligence, Wisdom, or Charisma by 1 and learn two druid or sorcerer cantrips that can be cast without components in dim light or darkness.",
+    "prerequisite": {
+      "race": "Tengu"
+    },
+    "prerequisiteText": "Tengu (hanataka) only.",
+    "abilityIncrease": [
+      "int",
+      "wis",
+      "cha"
+    ],
+    "repeatable": false,
+    "category": "racial",
+    "source": "Ryoko's Guide to the Yokai Realms v0.90",
+    "sourceShort": "RYOKO v0.90"
+  },
+  {
+    "id": "ryoko-spirit-bonded",
+    "name": "Spirit Bonded",
+    "summary": "Learn find familiar and gain one free componentless casting per long rest that allows the familiar to attack. You can also choose one of Ryoko’s special familiar forms, which gains scaling temporary hit points and improvement-tree benefits.",
+    "prerequisite": null,
+    "prerequisiteText": null,
+    "abilityIncrease": [],
+    "repeatable": false,
+    "category": "general",
+    "source": "Ryoko's Guide to the Yokai Realms v0.90",
+    "sourceShort": "RYOKO v0.90"
+  },
+  {
+    "id": "ryoko-springtail-agility",
+    "name": "Springtail Agility",
+    "summary": "Increase Dexterity by 1 and gain a bonus-action leap that costs no movement and avoids opportunity attacks, with proficiency-bonus uses per long rest.",
+    "prerequisite": {
+      "race": "Enkoh"
+    },
+    "prerequisiteText": "Enkoh (springtail) only.",
+    "abilityIncrease": [
+      "dex"
+    ],
+    "repeatable": false,
+    "category": "racial",
+    "source": "Ryoko's Guide to the Yokai Realms v0.90",
+    "sourceShort": "RYOKO v0.90"
+  },
+  {
+    "id": "ryoko-tengu-training",
+    "name": "Tengu Training",
+    "summary": "Increase Dexterity or Wisdom by 1, gain proficiency with one Finesse weapon, and use a limited reaction to counterattack a creature that misses you with a melee attack while you hold a Finesse weapon.",
+    "prerequisite": null,
+    "prerequisiteText": null,
+    "abilityIncrease": [
+      "dex",
+      "wis"
+    ],
+    "repeatable": false,
+    "category": "general",
+    "source": "Ryoko's Guide to the Yokai Realms v0.90",
+    "sourceShort": "RYOKO v0.90"
+  },
+  {
+    "id": "ryoko-tessen-master",
+    "name": "Tessen Master",
+    "summary": "Increase Strength or Dexterity by 1. A tessen gains additional piercing and thrown options for you, and while wielding one you gain a special once-per-round reaction used only to deflect a projectile with its Fan Shield property.",
+    "prerequisite": {
+      "weaponProficiency": "tessen"
+    },
+    "prerequisiteText": "Requires proficiency with tessen.",
+    "abilityIncrease": [
+      "str",
+      "dex"
+    ],
+    "repeatable": false,
+    "category": "general",
+    "source": "Ryoko's Guide to the Yokai Realms v0.90",
+    "sourceShort": "RYOKO v0.90"
+  }
 ]

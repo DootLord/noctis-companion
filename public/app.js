@@ -172,6 +172,7 @@ function spellCard(spell, mode) {
         ${prepared ? `<span class="badge prepared-badge">Prepared</span>` : ""}
         ${spell.concentration ? `<span class="badge">Concentration</span>` : ""}
         ${spell.ritual ? `<span class="badge">Ritual</span>` : ""}
+        ${spell.sourceShort && spell.sourceShort !== "PHB 2014" ? `<span class="badge source-badge">${escapeHtml(spell.sourceShort)}</span>` : ""}
       </div>
     </div>
     <div class="spell-info-grid">${info.map(([k,v]) => `<div><span>${k}</span><strong>${escapeHtml(v)}</strong></div>`).join("")}</div>
@@ -318,14 +319,14 @@ function renderFeats() {
   }).join("") : `<div class="notice">No feats selected yet. Your first Wizard ASI/feat choice is at level 4.</div>`;
 
   const q = $("#featSearch").value.trim().toLowerCase();
-  const list = featCatalogue.filter(f => !q || `${f.name} ${f.summary} ${f.reason || ""}`.toLowerCase().includes(q));
+  const list = featCatalogue.filter(f => !q || `${f.name} ${f.summary} ${f.reason || ""} ${f.sourceShort || f.source || ""}`.toLowerCase().includes(q));
   $("#featCatalogue").innerHTML = list.map(feat => {
     const chosenAlready = chosen.some(x => x.id === feat.id);
     const status = chosenAlready && !feat.repeatable ? "Chosen" : feat.eligible ? "Available" : (feat.reason || "Unavailable");
     return `<article class="feat-card ${feat.eligible ? "eligible" : "locked"}">
-      <div class="feat-card-head"><div><div class="spell-kicker">PHB FEAT</div><h3>${escapeHtml(feat.name)}</h3></div><span class="badge ${feat.eligible ? "prepared-badge" : ""}">${escapeHtml(status)}</span></div>
+      <div class="feat-card-head"><div><div class="spell-kicker">${escapeHtml(feat.sourceShort || "PHB 2014")}${feat.category === "racial" ? " · RACIAL FEAT" : " · FEAT"}</div><h3>${escapeHtml(feat.name)}</h3></div><span class="badge ${feat.eligible ? "prepared-badge" : ""}">${escapeHtml(status)}</span></div>
       <p>${escapeHtml(feat.summary)}</p>
-      ${feat.prerequisite ? `<div class="feat-prereq">${feat.eligible ? "Prerequisite met" : escapeHtml(feat.reason || "Prerequisite not met")}</div>` : `<div class="feat-prereq">No prerequisite</div>`}
+      ${feat.prerequisite ? `<div class="feat-prereq">${feat.eligible ? escapeHtml(feat.prerequisiteText || "Prerequisite met") : escapeHtml(feat.reason || feat.prerequisiteText || "Prerequisite not met")}</div>` : `<div class="feat-prereq">No prerequisite</div>`}
       ${(feat.abilityIncrease || []).length ? `<div class="feat-boost">Ability increase: ${feat.abilityIncrease.map(a=>escapeHtml(abilityLabel(a))).join(" or ")} +1</div>` : ""}
     </article>`;
   }).join("");

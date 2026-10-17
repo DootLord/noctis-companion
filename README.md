@@ -147,3 +147,15 @@ The companion now includes a PHB 2014 feat browser and a guided Wizard level-up 
 - Half-feat ability increases are written back to the corresponding MAIN ability score.
 - At Necromancer 6, `Animate Dead` is added automatically if it is not already in the spellbook.
 - The Level Up tab includes a 1-20 Wizard / School of Necromancy roadmap and slot progression.
+
+## v6 - Ryoko's Guide content
+
+This build also includes the user-supplied **Ryoko's Guide to the Yokai Realms v0.90** player options:
+
+- 43 additional spells from the book's **Wizard Spells** list (cantrips through 5th level).
+- 26 general feats from the book's Feats section.
+- 13 racial feats, shown in the feat catalogue but locked when Noctis does not meet the racial prerequisite.
+- Source badges distinguish PHB 2014 content from Ryoko v0.90 content.
+- A fresh OCR/text-cleanup pass was applied after the import.
+
+The companion still treats Noctis as a 2014 Wizard/Necromancer. Expansion spells only appear as Wizard options when Ryoko's own Wizard spell list includes them.

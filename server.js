@@ -288,7 +288,20 @@ function featEligibility(feat, character, state) {
   if (!feat.repeatable && (state.feats || []).some(x => x.id === feat.id)) return { eligible:false, reason:"Already chosen" };
   const p = feat.prerequisite;
   if (!p) return { eligible:true, reason:"" };
+  if (p.level && Number(character.level || 0) < Number(p.level)) return { eligible:false, reason:`Requires level ${p.level}+` };
+  if (p.race && String(character.race || "").toLowerCase() !== String(p.race).toLowerCase()) return { eligible:false, reason:feat.prerequisiteText || `Requires ${p.race}` };
   if (p.spellcasting && character.class !== "Wizard") return { eligible:false, reason:"Requires spellcasting" };
+  if (p.cantrip && Number(character.cantripsKnown || 0) < 1) return { eligible:false, reason:"Requires the ability to cast a cantrip" };
+  if (p.extraAttack) return { eligible:false, reason:feat.prerequisiteText || "Requires Extra Attack" };
+  if (p.improvedExtraAttack) return { eligible:false, reason:feat.prerequisiteText || "Requires Improved Extra Attack" };
+  if (p.multiclass) return { eligible:false, reason:feat.prerequisiteText || "Requires a multiclass character" };
+  if (p.singleClass === true) {
+    // This companion currently models Noctis as a single-class Wizard, so this prerequisite is met.
+  }
+  if (p.weaponProficiency) {
+    const wizardWeapons = new Set(["dagger","darts","sling","quarterstaff","light crossbow"]);
+    if (!wizardWeapons.has(String(p.weaponProficiency).toLowerCase())) return { eligible:false, reason:feat.prerequisiteText || `Requires proficiency with ${p.weaponProficiency}` };
+  }
   if (p.ability && Number(character.abilities?.[p.ability] || 0) < Number(p.min || 0)) {
     return { eligible:false, reason:`Requires ${ABILITY_NAMES[p.ability] || p.ability} ${p.min}+` };
   }
