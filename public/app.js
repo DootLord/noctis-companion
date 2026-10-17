@@ -214,9 +214,15 @@ function renderAll() {
   $("#levelSetting").value = c.level;
   $("#intSetting").value = c.intScore;
 
-  $("#arcaneRecoveryStatus").textContent = model.state.resources?.arcaneRecoveryUsed
-    ? "Arcane Recovery used"
-    : `Arcane Recovery: ${c.arcaneRecoveryBudget} slot levels`;
+  const recoveryUsed = model.state.resources?.arcaneRecoveryUsed;
+  const recoveryEl = $("#arcaneRecoveryStatus");
+  recoveryEl.textContent = recoveryUsed
+    ? "Arcane Recovery · Used"
+    : `Arcane Recovery · ${c.arcaneRecoveryBudget} levels · Use`;
+  recoveryEl.disabled = recoveryUsed;
+  recoveryEl.setAttribute("aria-label", recoveryUsed
+    ? "Arcane Recovery has already been used since the last long rest"
+    : `Use Arcane Recovery. Restore up to ${c.arcaneRecoveryBudget} combined spell-slot levels during a short rest.`);
 
   renderSlots();
   renderPrepared();
@@ -542,10 +548,12 @@ function recoveryOptions() {
 
 function openShortRest() {
   const used = model.state.resources?.arcaneRecoveryUsed;
-  $("#arcaneRecoveryHelp").textContent = used
-    ? "You've already used Arcane Recovery since your last long rest. You can still take a short rest, but it won't restore spell slots."
-    : `Once per long rest, Arcane Recovery can restore expended spell slots with combined levels up to ${model.character.arcaneRecoveryBudget}.`;
   const options = recoveryOptions();
+  $("#arcaneRecoveryHelp").textContent = used
+    ? "You've already used Arcane Recovery since your last long rest. A long rest refreshes it."
+    : options.length
+      ? `Choose spent slots to restore. Their combined levels can total up to ${model.character.arcaneRecoveryBudget}. For example, a 2nd-level slot costs 2 recovery levels and a 1st-level slot costs 1.`
+      : `Arcane Recovery is available, but you have no expended spell slots to restore yet. Your current budget is ${model.character.arcaneRecoveryBudget} combined slot levels.`;
   $("#recoveryChoice").innerHTML = `<option value="">Don't recover spell slots</option>` + options.map(c=>{
     const counts={}; c.forEach(x=>counts[x]=(counts[x]||0)+1);
     const label=Object.entries(counts).map(([lvl,n])=>`${n} × ${ordinal(lvl)}-level`).join(" + ");
@@ -619,6 +627,7 @@ $("#asiMode").addEventListener("change",updateAdvancementPanels);
 $("#commitLevelUp").onclick=()=>commitLevelUp().catch(e=>toast(e.message));
 
 $("#shortRest").onclick=openShortRest;
+$("#arcaneRecoveryStatus").onclick=openShortRest;
 $("#confirmShortRest").onclick=()=>takeShortRest(true).catch(e=>toast(e.message));
 $("#shortRestNoRecovery").onclick=()=>takeShortRest(false).catch(e=>toast(e.message));
 $("#longRest").onclick=async()=>{
