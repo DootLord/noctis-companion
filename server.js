@@ -19,6 +19,7 @@ const SPELLBOOK_SHEET = "SpellBook";
 const BAG_SHEET = "BAG";
 const ABILITIES_SHEET = "ABILITIES";
 const LOCAL_SPELLS_PATH = path.join(__dirname, "data", "wizard-spells-2014.json");
+const REFERENCE_SPELLS_PATH = path.join(__dirname, "data", "reference-spells-2014.json");
 const LOCAL_FEATS_PATH = path.join(__dirname, "data", "feats-2014.json");
 
 if (!SPREADSHEET_ID) console.warn("SPREADSHEET_ID is not set.");
@@ -80,6 +81,17 @@ function readLocalSpells() {
   }
 }
 
+function readReferenceSpells() {
+  try {
+    if (!fs.existsSync(REFERENCE_SPELLS_PATH)) return readLocalSpells();
+    const parsed = JSON.parse(fs.readFileSync(REFERENCE_SPELLS_PATH, "utf8"));
+    return Array.isArray(parsed) ? parsed : (parsed.spells || []);
+  } catch (err) {
+    console.warn("Could not read reference spell database:", err.message);
+    return readLocalSpells();
+  }
+}
+
 function readLocalFeats() {
   try {
     if (!fs.existsSync(LOCAL_FEATS_PATH)) return [];
@@ -92,12 +104,16 @@ function readLocalFeats() {
 }
 
 const catalogue = readLocalSpells();
+const referenceCatalogue = readReferenceSpells();
 const spellByIndex = new Map(catalogue.map(s => [s.index, s]));
+const referenceSpellByIndex = new Map(referenceCatalogue.map(s => [s.index, s]));
 const feats = readLocalFeats();
 const featById = new Map(feats.map(f => [f.id, f]));
 const ASI_LEVELS = new Set([4, 8, 12, 16, 19]);
 const ABILITY_CELLS = { str:"B8", dex:"B12", con:"B16", int:"B20", wis:"B26", cha:"B32" };
 const ABILITY_NAMES = { str:"Strength", dex:"Dexterity", con:"Constitution", int:"Intelligence", wis:"Wisdom", cha:"Charisma" };
+const STANDARD_CONDITIONS = ["Blinded","Charmed","Deafened","Frightened","Grappled","Incapacitated","Invisible","Paralysed","Petrified","Poisoned","Prone","Restrained","Stunned","Unconscious"];
+let appDataSheetReady = false;
 
 async function getValues(range) {
   const result = await sheetsClient().spreadsheets.values.get({ spreadsheetId: SPREADSHEET_ID, range });
@@ -157,10 +173,11 @@ function slotTable(level) {
 }
 
 async function ensureAppDataSheet() {
+  if (appDataSheetReady) return;
   const sheets = sheetsClient();
   const meta = await sheets.spreadsheets.get({ spreadsheetId: SPREADSHEET_ID, fields: "sheets.properties" });
   const existing = (meta.data.sheets || []).find(s => s.properties?.title === APP_DATA_SHEET);
-  if (existing) return;
+  if (existing) { appDataSheetReady = true; return; }
 
   await sheets.spreadsheets.batchUpdate({
     spreadsheetId: SPREADSHEET_ID,
@@ -172,6 +189,7 @@ async function ensureAppDataSheet() {
     valueInputOption: "RAW",
     requestBody: { values: [["type", "key", "value"]] }
   });
+  appDataSheetReady = true;
 }
 
 function emptyState() {
@@ -184,6 +202,7 @@ function emptyState() {
     slotsUsed: {},
     casts: {},
     resources: { arcaneRecoveryUsed: false },
+    campaign: { conditions: [], exhaustion: 0, concentration: "" },
     feats: [],
     levelHistory: []
   };
@@ -204,6 +223,11 @@ async function readState() {
     if (type === "slot") state.slotsUsed[key] = Math.max(0, asNumber(raw, 0));
     if (type === "cast") state.casts[key] = Math.max(0, asNumber(raw, 0));
     if (type === "resource") state.resources[key] = raw === "1" || raw === "true";
+    if (type === "campaign") {
+      if (key === "conditions") { try { state.campaign.conditions = JSON.parse(raw || "[]"); } catch {} }
+      else if (key === "exhaustion") state.campaign.exhaustion = clampInt(raw, 0, 6, 0);
+      else state.campaign[key] = raw || "";
+    }
     if (type === "feat") { try { state.feats.push(JSON.parse(raw || "{}")); } catch {} }
     if (type === "levelup") { try { state.levelHistory.push(JSON.parse(raw || "{}")); } catch {} }
   }
@@ -224,6 +248,7 @@ async function writeState(state) {
   for (const [key, value] of Object.entries(state.slotsUsed || {})) rows.push(["slot", key, String(value)]);
   for (const [key, value] of Object.entries(state.casts || {})) rows.push(["cast", key, String(value)]);
   for (const [key, value] of Object.entries(state.resources || {})) rows.push(["resource", key, value ? "1" : "0"]);
+  for (const [key, value] of Object.entries(state.campaign || {})) rows.push(["campaign", key, key === "conditions" ? JSON.stringify(value || []) : String(value ?? "")]);
   (state.feats || []).forEach((feat, i) => rows.push(["feat", `${feat.id || "feat"}:${i}`, JSON.stringify(feat)]));
   (state.levelHistory || []).forEach(entry => rows.push(["levelup", String(entry.level || rows.length), JSON.stringify(entry)]));
 
@@ -254,6 +279,29 @@ async function getCharacter(state) {
   const slotsUsed = {};
   slots.forEach((max, i) => { slotsUsed[i + 1] = Math.min(max, Math.max(0, asNumber(state.slotsUsed[i + 1], 0))); });
 
+  const dexMod = abilityModifier(abilities.dex);
+  const conMod = abilityModifier(abilities.con);
+  const hpMax = Math.max(1, asNumber(cell(main, "L10"), 6 + conMod + Math.max(0, level - 1) * (4 + conMod)));
+  const hpCurrent = Math.max(0, Math.min(hpMax, asNumber(cell(main, "L7"), hpMax)));
+  const tempHp = Math.max(0, asNumber(cell(main, "O10"), 0));
+  const ac = Math.max(0, asNumber(cell(main, "O7"), 10 + dexMod));
+  const initiative = asNumber(cell(main, "U2"), dexMod);
+  const speed = Math.max(0, asNumber(cell(main, "Y2"), 30));
+  const passivePerception = asNumber(cell(main, "Q2"), 10 + abilityModifier(abilities.wis));
+  const inspiration = Boolean(asNumber(cell(main, "Y7"), 0));
+  const hitDie = String(cell(main, "T11") || "d6");
+  const hitDiceCurrent = Math.max(0, Math.min(level, asNumber(cell(main, "U11"), level)));
+  const hitDiceMax = Math.max(level, asNumber(cell(main, "T12"), level));
+  const deathSuccesses = ["R8","S8","T8"].filter(a1 => asNumber(cell(main, a1), 0) > 0).length;
+  const deathFailures = ["U8","V8","W8"].filter(a1 => asNumber(cell(main, a1), 0) > 0).length;
+  const saves = { str:asNumber(cell(main,"J5"),abilityModifier(abilities.str)), dex:asNumber(cell(main,"J9"),dexMod), con:asNumber(cell(main,"J13"),conMod), int:asNumber(cell(main,"J17"),intMod+prof), wis:asNumber(cell(main,"J23"),abilityModifier(abilities.wis)+prof), cha:asNumber(cell(main,"J29"),abilityModifier(abilities.cha)) };
+  const skills = {
+    athletics:asNumber(cell(main,"F6"),abilityModifier(abilities.str)), acrobatics:asNumber(cell(main,"F10"),dexMod), sleightOfHand:asNumber(cell(main,"F11"),dexMod), stealth:asNumber(cell(main,"F12"),dexMod),
+    arcana:asNumber(cell(main,"F18"),intMod), history:asNumber(cell(main,"F19"),intMod), investigation:asNumber(cell(main,"F20"),intMod), nature:asNumber(cell(main,"F21"),intMod), religion:asNumber(cell(main,"F22"),intMod),
+    animalHandling:asNumber(cell(main,"F24"),abilityModifier(abilities.wis)), insight:asNumber(cell(main,"F25"),abilityModifier(abilities.wis)), medicine:asNumber(cell(main,"F26"),abilityModifier(abilities.wis)), perception:asNumber(cell(main,"F27"),abilityModifier(abilities.wis)), survival:asNumber(cell(main,"F28"),abilityModifier(abilities.wis)),
+    deception:asNumber(cell(main,"F30"),abilityModifier(abilities.cha)), intimidation:asNumber(cell(main,"F31"),abilityModifier(abilities.cha)), performance:asNumber(cell(main,"F32"),abilityModifier(abilities.cha)), persuasion:asNumber(cell(main,"F33"),abilityModifier(abilities.cha))
+  };
+
   return {
     name,
     class: "Wizard",
@@ -271,7 +319,15 @@ async function getCharacter(state) {
     spellbookMinimum: 6 + Math.max(0, level - 1) * 2,
     slots,
     slotsUsed,
-    arcaneRecoveryBudget: Math.ceil(level / 2)
+    arcaneRecoveryBudget: Math.ceil(level / 2),
+    hp: { current:hpCurrent, max:hpMax, temp:tempHp },
+    ac, initiative, speed, passivePerception, inspiration,
+    hitDice: { die:hitDie, current:hitDiceCurrent, max:hitDiceMax },
+    deathSaves: { successes:deathSuccesses, failures:deathFailures },
+    saves, skills,
+    conditions: Array.isArray(state.campaign?.conditions) ? state.campaign.conditions : [],
+    exhaustion: clampInt(state.campaign?.exhaustion, 0, 6, 0),
+    concentration: String(state.campaign?.concentration || "")
   };
 }
 
@@ -492,6 +548,21 @@ app.get("/api/spells/:index", requireAuth, (req, res) => {
   res.json(spell);
 });
 
+app.get("/api/reference/spells", requireAuth, (req, res) => {
+  let results = referenceCatalogue;
+  const level = req.query.level !== undefined ? Number(req.query.level) : null;
+  const className = String(req.query.class || "").trim().toLowerCase();
+  if (Number.isFinite(level)) results = results.filter(s => Number(s.level) === level);
+  if (className) results = results.filter(s => (s.classes || []).some(c => String(c).toLowerCase() === className));
+  res.json({ results });
+});
+
+app.get("/api/reference/spells/:index", requireAuth, (req, res) => {
+  const spell = referenceSpellByIndex.get(req.params.index);
+  if (!spell) return res.status(404).json({ error: "Reference spell not found" });
+  res.json(spell);
+});
+
 app.get("/api/feats", requireAuth, async (_req, res) => {
   try {
     const state = await readState();
@@ -512,7 +583,8 @@ app.put("/api/state", requireAuth, async (req, res) => {
       prepared: Array.isArray(req.body?.prepared) ? [...new Set(req.body.prepared)] : current.prepared,
       custom: Array.isArray(req.body?.custom) ? req.body.custom : current.custom,
       notes: req.body?.notes && typeof req.body.notes === "object" ? req.body.notes : current.notes,
-      settings: req.body?.settings && typeof req.body.settings === "object" ? req.body.settings : current.settings
+      settings: req.body?.settings && typeof req.body.settings === "object" ? req.body.settings : current.settings,
+      campaign: req.body?.campaign && typeof req.body.campaign === "object" ? { ...current.campaign, ...req.body.campaign } : current.campaign
     };
     next.prepared = next.prepared.filter(x => next.known.includes(x) && Number(spellByIndex.get(x)?.level || 0) > 0);
 
@@ -678,6 +750,7 @@ app.post("/api/cast", requireAuth, async (req, res) => {
 
     const castKey = `${index}@${castLevel}`;
     state.casts[castKey] = asNumber(state.casts[castKey], 0) + 1;
+    if (spell.concentration) state.campaign.concentration = index;
     await writeState(state);
     const updatedCharacter = await getCharacter(state);
     await syncSpellSheet(state, updatedCharacter, { names:false, prepared:false, slots:true });
@@ -698,6 +771,89 @@ app.post("/api/cast", requireAuth, async (req, res) => {
   }
 });
 
+app.post("/api/campaign/action", requireAuth, async (req, res) => {
+  try {
+    const state = await readState();
+    let character = await getCharacter(state);
+    const action = String(req.body?.action || "");
+    const writes = [];
+    let message = "";
+    let concentrationCheck = null;
+    let stateDirty = false;
+
+    const writeDeathSaves = (successes, failures) => {
+      for (let i=0;i<3;i++) writes.push(one(`MAIN!${["R","S","T"][i]}8`, i < successes ? 1 : 0));
+      for (let i=0;i<3;i++) writes.push(one(`MAIN!${["U","V","W"][i]}8`, i < failures ? 1 : 0));
+    };
+
+    if (action === "damage") {
+      const amount = Math.max(0, Math.trunc(asNumber(req.body?.amount, 0)));
+      if (!amount) return res.status(400).json({ error:"Enter a damage amount." });
+      let remaining = amount;
+      let temp = character.hp.temp;
+      const absorbed = Math.min(temp, remaining);
+      temp -= absorbed; remaining -= absorbed;
+      const hp = Math.max(0, character.hp.current - remaining);
+      writes.push(one("MAIN!O10", temp), one("MAIN!L7", hp));
+      if (character.concentration && amount > 0) concentrationCheck = { dc:Math.max(10, Math.floor(amount / 2)), bonus:character.saves.con };
+      message = absorbed ? `${absorbed} damage absorbed by temporary HP. ${remaining} reached your hit points.` : `${amount} damage taken.`;
+      if (character.hp.current === 0) message += " You were already at 0 HP; remember that taking damage normally causes a failed death save (two on a critical hit).";
+    } else if (action === "heal") {
+      const amount = Math.max(0, Math.trunc(asNumber(req.body?.amount, 0)));
+      if (!amount) return res.status(400).json({ error:"Enter a healing amount." });
+      const hp = Math.min(character.hp.max, character.hp.current + amount);
+      writes.push(one("MAIN!L7", hp));
+      if (character.hp.current === 0 && hp > 0) writeDeathSaves(0,0);
+      message = `Healed ${hp - character.hp.current} HP.`;
+    } else if (action === "temp-hp") {
+      const temp = Math.max(0, Math.trunc(asNumber(req.body?.amount, 0)));
+      writes.push(one("MAIN!O10", temp)); message = temp ? `Temporary HP set to ${temp}.` : "Temporary HP cleared.";
+    } else if (action === "inspiration") {
+      const next = !character.inspiration; writes.push(one("MAIN!Y7", next ? 1 : 0)); message = next ? "Inspiration gained." : "Inspiration spent/cleared.";
+    } else if (action === "death-saves") {
+      const successes = clampInt(req.body?.successes, 0, 3, character.deathSaves.successes);
+      const failures = clampInt(req.body?.failures, 0, 3, character.deathSaves.failures);
+      writeDeathSaves(successes, failures); message = "Death saves updated.";
+    } else if (action === "hit-die") {
+      if (character.hitDice.current <= 0) return res.status(400).json({ error:"No Hit Dice remaining." });
+      if (character.hp.current <= 0) return res.status(400).json({ error:"You cannot spend Hit Dice for healing while at 0 HP." });
+      const dieSize = Math.max(1, asNumber(character.hitDice.die, 6));
+      const roll = 1 + Math.floor(Math.random() * dieSize);
+      const healed = Math.max(0, roll + abilityModifier(character.abilities.con));
+      const hp = Math.min(character.hp.max, character.hp.current + healed);
+      writes.push(one("MAIN!L7", hp), one("MAIN!U11", Math.max(0, character.hitDice.current - 1)));
+      message = `Rolled ${roll} on ${character.hitDice.die} ${abilityModifier(character.abilities.con) >= 0 ? "+" : ""}${abilityModifier(character.abilities.con)} CON = ${healed} healing (${hp-character.hp.current} HP restored).`;
+    } else if (action === "condition-add") {
+      const condition = String(req.body?.condition || "").trim();
+      if (!STANDARD_CONDITIONS.includes(condition)) return res.status(400).json({ error:"Unknown condition." });
+      state.campaign.conditions = [...new Set([...(state.campaign.conditions || []), condition])];
+      stateDirty = true;
+      message = `${condition} added.`;
+    } else if (action === "condition-remove") {
+      const condition = String(req.body?.condition || "").trim();
+      state.campaign.conditions = (state.campaign.conditions || []).filter(x => x !== condition); stateDirty = true; message = `${condition} removed.`;
+    } else if (action === "exhaustion") {
+      state.campaign.exhaustion = clampInt(req.body?.level, 0, 6, 0); stateDirty = true; message = `Exhaustion set to ${state.campaign.exhaustion}.`;
+    } else if (action === "concentration-end") {
+      state.campaign.concentration = ""; stateDirty = true; message = "Concentration ended.";
+    } else if (action === "ac") {
+      const ac = clampInt(req.body?.value, 0, 99, character.ac); writes.push(one("MAIN!O7", ac)); message = `AC set to ${ac}.`;
+    } else if (action === "max-hp") {
+      const max = clampInt(req.body?.value, 1, 999, character.hp.max); writes.push(one("MAIN!L10", max), one("MAIN!L7", Math.min(character.hp.current, max))); message = `Maximum HP set to ${max}.`;
+    } else {
+      return res.status(400).json({ error:"Unknown campaign action." });
+    }
+
+    if (writes.length) await updateRanges(writes);
+    if (stateDirty) await writeState(state);
+    character = await getCharacter(state);
+    res.json({ ok:true, state, character, message, concentrationCheck });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error:err.message });
+  }
+});
+
 app.post("/api/rest", requireAuth, async (req, res) => {
   try {
     const type = req.body?.type;
@@ -708,6 +864,15 @@ app.post("/api/rest", requireAuth, async (req, res) => {
       state.slotsUsed = {};
       state.casts = {};
       state.resources.arcaneRecoveryUsed = false;
+      state.campaign.concentration = "";
+      state.campaign.exhaustion = Math.max(0, asNumber(state.campaign.exhaustion, 0) - 1);
+      const regainedHitDice = Math.max(1, Math.floor(character.hitDice.max / 2));
+      await updateRanges([
+        one("MAIN!L7", character.hp.max),
+        one("MAIN!O10", 0),
+        one("MAIN!U11", Math.min(character.hitDice.max, character.hitDice.current + regainedHitDice)),
+        ...["R","S","T","U","V","W"].map(col => one(`MAIN!${col}8`, 0))
+      ]);
     } else if (type === "short") {
       const recover = Array.isArray(req.body?.recover) ? req.body.recover.map(Number).filter(Number.isFinite) : [];
       if (recover.length) {

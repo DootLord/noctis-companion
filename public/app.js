@@ -1,12 +1,15 @@
-const UI_VERSION = "5.0.0";
+const UI_VERSION = "10.0.0";
 const $ = q => document.querySelector(q);
 const $$ = q => [...document.querySelectorAll(q)];
 
 const REQUIRED_UI = [
   "#login", "#loginForm", "#app", "#charName", "#subtitle", "#dc", "#atk", "#prepCount",
+  "#currentHp", "#maxHp", "#combatAc", "#combatReference", "#saveList", "#skillList",
   "#slotDashboard", "#preparedList", "#bookList", "#discoverList", "#inventoryRows", "#levelCards",
   "#ownedFeats", "#featCatalogue", "#levelUpForm", "#nextLevelSummary", "#levelSpell1", "#levelSpell2",
-  "#levelFilter", "#schoolFilter", "#bookSearch", "#spellSearch", "#featSearch", "#castResult", "#toast"
+  "#levelFilter", "#schoolFilter", "#bookSearch", "#spellSearch", "#featSearch", "#castResult", "#toast",
+  "#referenceSpellSearch", "#referenceSpellLevel", "#referenceSpellSchool", "#referenceSpellClass", "#referenceSpellSource", "#referenceSpellTrait",
+  "#referenceSpellList", "#rollResult", "#referenceFeatSearch", "#referenceFeatType", "#referenceFeatSource", "#referenceFeatList"
 ];
 
 function verifyUiVersion() {
@@ -25,15 +28,20 @@ function verifyUiVersion() {
     return false;
   }
 
-  throw new Error(`Interface files are out of sync (missing ${missing.join(", ")}). Redeploy v${UI_VERSION} and hard-refresh once.`);
+  document.body.innerHTML = `<main class="content-shell"><div class="panel startup-panel"><div class="eyebrow">INTERFACE ERROR · v${UI_VERSION}</div><h2>Companion files are out of sync</h2><p class="muted">Missing: ${escapeHtml(missing.join(", "))}. Redeploy the current build and refresh once.</p><button class="primary" onclick="location.reload()">Reload companion</button></div></main>`;
+  return false;
 }
 
 let model = null;
 let catalogue = [];
+let referenceCatalogue = [];
 let featCatalogue = [];
 let inventory = { coins: {}, items: [] };
 let inventoryDraft = [];
 let discoverLimit = window.matchMedia("(max-width: 700px)").matches ? 24 : 60;
+let referenceMode = "spells";
+let referenceSpellLimit = window.matchMedia("(max-width: 700px)").matches ? 36 : 72;
+let rollMode = localStorage.getItem("noctis-roll-mode") || "normal";
 
 async function api(url, options = {}) {
   const res = await fetch(url, {
@@ -41,16 +49,46 @@ async function api(url, options = {}) {
     ...options
   });
   const body = await res.json().catch(() => ({}));
+  if (res.status === 401 && url !== "/api/session" && url !== "/api/login") {
+    $("#app")?.classList.add("hidden");
+    $("#login")?.classList.remove("hidden");
+    throw new Error("Your session expired. Sign in again.");
+  }
   if (!res.ok) throw new Error(body.error || `Request failed (${res.status})`);
   return body;
 }
 
-function toast(message) {
+function toast(message, type = "info") {
   const el = $("#toast");
   el.textContent = message;
+  el.dataset.type = type;
   el.classList.add("show");
   clearTimeout(toast.timer);
-  toast.timer = setTimeout(() => el.classList.remove("show"), 2200);
+  toast.timer = setTimeout(() => el.classList.remove("show"), 2600);
+}
+
+function setSheetStatus(state) {
+  const el = $("#sheetSyncStatus");
+  if (!el) return;
+  const labels = { syncing:"↻ Syncing…", synced:"✓ Sheet synced", error:"! Sync failed" };
+  el.textContent = labels[state] || labels.synced;
+  el.dataset.state = state;
+}
+
+async function withButtonBusy(button, task, busyLabel = "Working…") {
+  if (!button || button.disabled) return;
+  const old = button.textContent;
+  button.disabled = true;
+  button.setAttribute("aria-busy", "true");
+  if (busyLabel) button.textContent = busyLabel;
+  try { return await task(); }
+  finally {
+    if (button.isConnected) {
+      button.disabled = false;
+      button.removeAttribute("aria-busy");
+      button.textContent = old;
+    }
+  }
 }
 
 function escapeHtml(value) {
@@ -100,6 +138,10 @@ function practicalHints(spell) {
 
 function getSpell(index) {
   return catalogue.find(s => s.index === index);
+}
+
+function getReferenceSpell(index) {
+  return referenceCatalogue.find(s => s.index === index);
 }
 
 function castsForSpell(index) {
@@ -191,14 +233,16 @@ async function boot() {
   }
   $("#app").classList.remove("hidden");
   await refresh();
+  activateInitialTab();
 }
 
 async function refresh() {
-  const [charResult, spellResult, featResult, invResult] = await Promise.all([
-    api("/api/character"), api("/api/spells"), api("/api/feats"), api("/api/inventory")
+  const [charResult, spellResult, referenceSpellResult, featResult, invResult] = await Promise.all([
+    api("/api/character"), api("/api/spells"), api("/api/reference/spells"), api("/api/feats"), api("/api/inventory")
   ]);
   model = charResult;
   catalogue = spellResult.results || [];
+  referenceCatalogue = referenceSpellResult.results || [];
   featCatalogue = featResult.results || [];
   inventory = invResult;
   inventoryDraft = (inventory.items || []).map(x => ({...x}));
@@ -225,13 +269,125 @@ function renderAll() {
     ? "Arcane Recovery has already been used since the last long rest"
     : `Use Arcane Recovery. Restore up to ${c.arcaneRecoveryBudget} combined spell-slot levels during a short rest.`);
 
+  renderCampaign();
   renderSlots();
   renderPrepared();
   renderSpellbook();
   renderDiscover();
   renderInventory();
   renderFeats();
+  renderReference();
   renderLevelUp();
+  setSheetStatus("synced");
+}
+
+function signed(n) {
+  const value = Number(n || 0);
+  return `${value >= 0 ? "+" : ""}${value}`;
+}
+
+const CONDITION_NAMES = ["Blinded","Charmed","Deafened","Frightened","Grappled","Incapacitated","Invisible","Paralysed","Petrified","Poisoned","Prone","Restrained","Stunned","Unconscious"];
+const SKILL_LABELS = { athletics:"Athletics", acrobatics:"Acrobatics", sleightOfHand:"Sleight of Hand", stealth:"Stealth", arcana:"Arcana", history:"History", investigation:"Investigation", nature:"Nature", religion:"Religion", animalHandling:"Animal Handling", insight:"Insight", medicine:"Medicine", perception:"Perception", survival:"Survival", deception:"Deception", intimidation:"Intimidation", performance:"Performance", persuasion:"Persuasion" };
+const ABILITY_LABELS = { str:"STR", dex:"DEX", con:"CON", int:"INT", wis:"WIS", cha:"CHA" };
+const ABILITY_FULL = { str:"Strength", dex:"Dexterity", con:"Constitution", int:"Intelligence", wis:"Wisdom", cha:"Charisma" };
+
+function d20() {
+  if (window.crypto?.getRandomValues) {
+    const array = new Uint32Array(1);
+    window.crypto.getRandomValues(array);
+    return (array[0] % 20) + 1;
+  }
+  return Math.floor(Math.random() * 20) + 1;
+}
+
+function setRollMode(mode) {
+  rollMode = ["normal","advantage","disadvantage"].includes(mode) ? mode : "normal";
+  localStorage.setItem("noctis-roll-mode", rollMode);
+  $$('[data-roll-mode]').forEach(btn => {
+    const active = btn.dataset.rollMode === rollMode;
+    btn.classList.toggle("active", active);
+    btn.setAttribute("aria-pressed", String(active));
+  });
+}
+
+function rollCheck(label, modifier = 0) {
+  const mod = Number(modifier || 0);
+  const rolls = rollMode === "normal" ? [d20()] : [d20(), d20()];
+  const chosen = rollMode === "advantage" ? Math.max(...rolls) : rollMode === "disadvantage" ? Math.min(...rolls) : rolls[0];
+  const total = chosen + mod;
+  const natural = chosen === 20 ? " · NAT 20" : chosen === 1 ? " · NAT 1" : "";
+  const modeLabel = rollMode === "advantage" ? "Advantage" : rollMode === "disadvantage" ? "Disadvantage" : "Normal";
+  const diceText = rolls.length === 2 ? `${rolls[0]} / ${rolls[1]} → ${chosen}` : `${chosen}`;
+  const el = $("#rollResult");
+  el.innerHTML = `<div><span class="panel-kicker">${escapeHtml(modeLabel.toUpperCase())} D20</span><strong>${escapeHtml(label)}</strong></div><div class="roll-math"><span>${diceText}</span><b>${signed(mod)}</b><em>=</em><strong>${total}</strong></div><small>${natural ? natural.slice(3) : "Tap another stat to roll again"}</small>`;
+  el.classList.remove("hidden");
+  el.classList.toggle("critical", chosen === 20);
+  el.classList.toggle("fumble", chosen === 1);
+  return { rolls, chosen, modifier: mod, total };
+}
+
+function renderCampaign() {
+  const c = model.character;
+  $("#concentrationCheck").classList.add("hidden");
+  $("#concentrationCheck").innerHTML = "";
+  const hp = c.hp || {current:0,max:1,temp:0};
+  $("#currentHp").textContent = hp.current;
+  $("#maxHp").textContent = hp.max;
+  $("#hpBigCurrent").textContent = hp.current;
+  $("#hpBigMax").textContent = hp.max;
+  $("#tempHpSummary").textContent = hp.temp ? `${hp.temp} temporary HP` : "No temporary HP";
+  $("#hpTempBadge").textContent = `${hp.temp || 0} temp`;
+  $("#tempHpInput").value = hp.temp || 0;
+  $("#combatAc").textContent = c.ac ?? "—";
+  $("#combatInitiative").textContent = signed(c.initiative);
+  $("#combatSpeed").textContent = c.speed ?? "—";
+  $("#inspirationStatus").textContent = c.inspiration ? "●" : "○";
+  $("#inspirationToggle").classList.toggle("active", Boolean(c.inspiration));
+  const pct = hp.max ? Math.max(0, Math.min(100, (hp.current / hp.max) * 100)) : 0;
+  $("#hpMeterFill").style.width = `${pct}%`;
+  $("#hitDiceSummary").textContent = `${c.hitDice?.current ?? 0} / ${c.hitDice?.max ?? c.level} ${c.hitDice?.die || "d6"}`;
+
+  const deathPips = (type, count) => Array.from({length:3}, (_,i)=>`<button class="death-pip ${i < count ? "filled" : ""}" data-action="death-${type}" data-count="${i+1}" aria-label="Set ${type} death saves to ${i+1}"></button>`).join("");
+  $("#deathSuccesses").innerHTML = deathPips("success", c.deathSaves?.successes || 0);
+  $("#deathFailures").innerHTML = deathPips("failure", c.deathSaves?.failures || 0);
+
+  $("#combatReference").innerHTML = [
+    ["AC", c.ac, "edit-ac"], ["Initiative", signed(c.initiative)], ["Speed", `${c.speed} ft`],
+    ["Proficiency", signed(c.proficiencyBonus)], ["Passive Perception", c.passivePerception], ["Spell Save DC", c.spellSaveDC], ["Spell Attack", signed(c.spellAttack)], ["Max HP", c.hp?.max, "edit-max-hp"]
+  ].map(([label,value,action])=>`<div class="reference-stat"><span>${escapeHtml(label)}</span><strong>${escapeHtml(value)}</strong>${action?`<button class="mini-edit" data-action="${action}">Edit</button>`:""}</div>`).join("");
+
+  $("#abilityStrip").innerHTML = Object.entries(c.abilities || {}).map(([key,score])=>`<button class="ability-roll" data-action="roll-check" data-roll-label="${escapeHtml(ABILITY_FULL[key] || key.toUpperCase())}" data-roll-mod="${Math.floor((Number(score)-10)/2)}" title="Roll a ${escapeHtml(ABILITY_FULL[key] || key)} check"><span>${ABILITY_LABELS[key] || key.toUpperCase()}</span><strong>${score}</strong><small>${signed(Math.floor((Number(score)-10)/2))} · roll</small></button>`).join("");
+  $("#saveList").innerHTML = Object.entries(c.saves || {}).map(([key,value])=>`<button class="check-row roll-check" data-action="roll-check" data-roll-label="${escapeHtml(ABILITY_FULL[key] || key)} Save" data-roll-mod="${Number(value)}"><span>${ABILITY_LABELS[key] || key.toUpperCase()} Save</span><strong>${signed(value)}</strong><small>Roll</small></button>`).join("");
+  $("#skillList").innerHTML = Object.entries(c.skills || {}).map(([key,value])=>`<button class="check-row roll-check" data-action="roll-check" data-roll-label="${escapeHtml(SKILL_LABELS[key] || key)}" data-roll-mod="${Number(value)}"><span>${escapeHtml(SKILL_LABELS[key] || key)}</span><strong>${signed(value)}</strong><small>Roll</small></button>`).join("");
+  setRollMode(rollMode);
+
+  const concentration = c.concentration ? getSpell(c.concentration) : null;
+  $("#concentrationCard").innerHTML = concentration
+    ? `<div><span class="status-kicker">CONCENTRATING</span><strong>${escapeHtml(concentration.name)}</strong><small>${escapeHtml(concentration.duration || "")}</small></div><button class="ghost-danger small" data-action="end-concentration">End</button>`
+    : `<div><span class="status-kicker">CONCENTRATION</span><strong>None</strong><small>Casting a concentration spell will track it here automatically.</small></div>`;
+
+  const conditions = Array.isArray(c.conditions) ? c.conditions : [];
+  $("#conditionList").innerHTML = conditions.length ? conditions.map(x=>`<button class="condition-chip" data-action="condition-remove" data-condition="${escapeHtml(x)}">${escapeHtml(x)} <span>×</span></button>`).join("") : `<span class="muted compact">No active conditions.</span>`;
+  const select = $("#conditionSelect");
+  const old = select.value;
+  select.innerHTML = `<option value="">Add condition…</option>` + CONDITION_NAMES.filter(x=>!conditions.includes(x)).map(x=>`<option value="${escapeHtml(x)}">${escapeHtml(x)}</option>`).join("");
+  if ([...select.options].some(o=>o.value===old)) select.value=old;
+  $("#exhaustionLevel").value = String(c.exhaustion || 0);
+}
+
+async function campaignAction(action, extra={}) {
+  setSheetStatus("syncing");
+  const result = await api("/api/campaign/action", {method:"POST", body:JSON.stringify({action,...extra})});
+  model.state = result.state;
+  model.character = result.character;
+  renderAll();
+  if (result.message) toast(result.message);
+  if (result.concentrationCheck) {
+    const box = $("#concentrationCheck");
+    box.innerHTML = `<strong>Concentration check</strong><span>Make a CON save ${signed(result.concentrationCheck.bonus)} vs DC ${result.concentrationCheck.dc}.</span><div><button class="secondary small" data-action="keep-concentration">Maintained</button><button class="ghost-danger small" data-action="end-concentration">Lost concentration</button></div>`;
+    box.classList.remove("hidden");
+  }
+  return result;
 }
 
 function renderSlots() {
@@ -264,7 +420,7 @@ function renderSpellbook() {
 }
 
 function renderDiscoverFilters() {
-  const maxSpellLevel = Math.ceil(model.character.level / 2);
+  const maxSpellLevel = Math.min(9, Math.ceil(model.character.level / 2));
   const old = $("#levelFilter").value || "all";
   $("#levelFilter").innerHTML = `<option value="all">Cantrip–${ordinal(maxSpellLevel)}</option>` + Array.from({length:maxSpellLevel+1}, (_,i) => `<option value="${i}">${i === 0 ? "Cantrips" : `${ordinal(i)} Level`}</option>`).join("");
   if ([...$("#levelFilter").options].some(o=>o.value===old)) $("#levelFilter").value=old;
@@ -277,7 +433,7 @@ function renderDiscoverFilters() {
 
 function renderDiscover() {
   renderDiscoverFilters();
-  const maxSpellLevel = Math.ceil(model.character.level / 2);
+  const maxSpellLevel = Math.min(9, Math.ceil(model.character.level / 2));
   const levelFilter = $("#levelFilter").value;
   const schoolFilter = $("#schoolFilter").value;
   const q = $("#spellSearch").value.trim().toLowerCase();
@@ -308,6 +464,152 @@ function renderInventory() {
 
 function abilityLabel(key) {
   return ({str:"Strength",dex:"Dexterity",con:"Constitution",int:"Intelligence",wis:"Wisdom",cha:"Charisma"})[key] || key;
+}
+
+function referenceSaveCue(spell) {
+  const text = `${spell.summary || ""} ${spell.description || ""}`;
+  const save = text.match(/(Strength|Dexterity|Constitution|Intelligence|Wisdom|Charisma) saving throw/i);
+  if (save) return `${save[1].slice(0,3).toUpperCase()} save`;
+  if (/spell attack/i.test(text)) return "Spell attack";
+  if (/automatically hits|hits automatically/i.test(text)) return "No attack roll";
+  return "";
+}
+
+function referenceSpellCard(spell) {
+  const level = Number(spell.level || 0);
+  const cue = referenceSaveCue(spell);
+  const schoolKey = schoolName(spell).toLowerCase().replace(/[^a-z]+/g, "-");
+  return `<article class="reference-spell-card" data-school="${escapeHtml(schoolKey)}">
+    <div class="reference-card-head">
+      <div><div class="spell-kicker">${escapeHtml(schoolName(spell))}</div><h3>${escapeHtml(spell.name)}</h3></div>
+      <div class="spell-badges"><span class="badge">${level === 0 ? "Cantrip" : `${ordinal(level)} level`}</span>${spell.ritual ? `<span class="badge">Ritual</span>` : ""}${spell.concentration ? `<span class="badge">Concentration</span>` : ""}</div>
+    </div>
+    <div class="reference-facts">
+      <span><small>CAST</small>${escapeHtml(spell.casting_time || "—")}</span>
+      <span><small>RANGE</small>${escapeHtml(spell.range || "—")}</span>
+      <span><small>DURATION</small>${escapeHtml(spell.duration || "—")}</span>
+      <span><small>COMPONENTS</small>${escapeHtml(componentsText(spell) || "—")}</span>
+    </div>
+    ${cue ? `<div class="reference-mechanic">🎲 ${escapeHtml(cue)}</div>` : ""}
+    <p>${escapeHtml(spellSummary(spell))}</p>
+    ${(spell.classes || []).length ? `<div class="reference-classes"><small>CLASSES</small>${(spell.classes || []).map(c=>`<span>${escapeHtml(c)}</span>`).join("")}</div>` : ""}
+    <div class="reference-card-footer"><span class="source-label">${escapeHtml(spell.sourceShort || spell.source || "Unknown source")}</span><button class="secondary small" data-action="reference-details" data-index="${spell.index}">Full details</button></div>
+  </article>`;
+}
+
+function referenceFeatCard(feat) {
+  const prereq = feat.prerequisiteText || (feat.prerequisite ? "Has a prerequisite" : "No prerequisite");
+  const boosts = (feat.abilityIncrease || []).map(abilityLabel);
+  return `<article class="reference-feat-card">
+    <div class="reference-card-head">
+      <div><div class="spell-kicker">${escapeHtml(feat.sourceShort || feat.source || "PHB 2014")} · ${feat.category === "racial" ? "RACIAL FEAT" : "FEAT"}</div><h3>${escapeHtml(feat.name)}</h3></div>
+      ${feat.repeatable ? `<span class="badge">Repeatable</span>` : ""}
+    </div>
+    <p>${escapeHtml(feat.summary || "No summary available.")}</p>
+    <div class="reference-feat-meta"><span><small>PREREQUISITE</small>${escapeHtml(prereq)}</span>${boosts.length ? `<span><small>ABILITY INCREASE</small>+1 ${escapeHtml(boosts.join(" or "))}</span>` : ""}</div>
+  </article>`;
+}
+
+function populateReferenceFilters() {
+  const levels = [...new Set(referenceCatalogue.map(s => Number(s.level || 0)))].sort((a,b)=>a-b);
+  const levelEl = $("#referenceSpellLevel");
+  const oldLevel = levelEl.value || "all";
+  levelEl.innerHTML = `<option value="all">All levels</option>` + levels.map(level=>`<option value="${level}">${level === 0 ? "Cantrips" : `${ordinal(level)} level`}</option>`).join("");
+  if ([...levelEl.options].some(o=>o.value===oldLevel)) levelEl.value=oldLevel;
+
+  const schools = [...new Set(referenceCatalogue.map(s=>schoolName(s)).filter(Boolean))].sort();
+  const schoolEl = $("#referenceSpellSchool");
+  const oldSchool = schoolEl.value || "all";
+  schoolEl.innerHTML = `<option value="all">All schools</option>` + schools.map(x=>`<option value="${escapeHtml(x)}">${escapeHtml(x)}</option>`).join("");
+  if ([...schoolEl.options].some(o=>o.value===oldSchool)) schoolEl.value=oldSchool;
+
+  const spellClasses = [...new Set(referenceCatalogue.flatMap(s=>s.classes || []).filter(Boolean))].sort();
+  const classEl = $("#referenceSpellClass");
+  const oldClass = classEl.value || "all";
+  classEl.innerHTML = `<option value="all">All classes</option>` + spellClasses.map(x=>`<option value="${escapeHtml(x)}">${escapeHtml(x)}</option>`).join("");
+  if ([...classEl.options].some(o=>o.value===oldClass)) classEl.value=oldClass;
+
+  const spellSources = [...new Set(referenceCatalogue.map(s=>s.sourceShort || s.source).filter(Boolean))].sort();
+  const spellSourceEl = $("#referenceSpellSource");
+  const oldSpellSource = spellSourceEl.value || "all";
+  spellSourceEl.innerHTML = `<option value="all">All sources</option>` + spellSources.map(x=>`<option value="${escapeHtml(x)}">${escapeHtml(x)}</option>`).join("");
+  if ([...spellSourceEl.options].some(o=>o.value===oldSpellSource)) spellSourceEl.value=oldSpellSource;
+
+  const featSources = [...new Set(featCatalogue.map(f=>f.sourceShort || f.source || "PHB 2014"))].sort();
+  const featSourceEl = $("#referenceFeatSource");
+  const oldFeatSource = featSourceEl.value || "all";
+  featSourceEl.innerHTML = `<option value="all">All sources</option>` + featSources.map(x=>`<option value="${escapeHtml(x)}">${escapeHtml(x)}</option>`).join("");
+  if ([...featSourceEl.options].some(o=>o.value===oldFeatSource)) featSourceEl.value=oldFeatSource;
+}
+
+function renderReferenceSpells() {
+  const q = $("#referenceSpellSearch").value.trim().toLowerCase();
+  const level = $("#referenceSpellLevel").value;
+  const school = $("#referenceSpellSchool").value;
+  const className = $("#referenceSpellClass").value;
+  const source = $("#referenceSpellSource").value;
+  const trait = $("#referenceSpellTrait").value;
+  let spells = referenceCatalogue.filter(spell => {
+    if (level !== "all" && Number(spell.level) !== Number(level)) return false;
+    if (school !== "all" && schoolName(spell) !== school) return false;
+    if (className !== "all" && !(spell.classes || []).includes(className)) return false;
+    if (source !== "all" && (spell.sourceShort || spell.source) !== source) return false;
+    if (trait === "ritual" && !spell.ritual) return false;
+    if (trait === "concentration" && !spell.concentration) return false;
+    const casting = String(spell.casting_time || "").toLowerCase();
+    if (trait === "reaction" && !casting.includes("reaction")) return false;
+    if (trait === "bonus" && !casting.includes("bonus")) return false;
+    if (q && !`${spell.name} ${schoolName(spell)} ${(spell.classes || []).join(" ")} ${spellSummary(spell)} ${spell.description || ""} ${spell.sourceShort || ""}`.toLowerCase().includes(q)) return false;
+    return true;
+  }).sort((a,b)=>Number(a.level)-Number(b.level) || a.name.localeCompare(b.name));
+  $("#referenceSpellCount").textContent = `${spells.length} spell${spells.length === 1 ? "" : "s"}`;
+  const visible = spells.slice(0, referenceSpellLimit);
+  const more = spells.length > visible.length ? `<div class="load-more-wrap reference-load-more"><button class="secondary" data-action="reference-spell-more">Show ${Math.min(36, spells.length-visible.length)} more · ${spells.length-visible.length} remaining</button></div>` : "";
+  $("#referenceSpellList").innerHTML = spells.length ? visible.map(referenceSpellCard).join("") + more : `<div class="notice reference-empty">No spells match those filters.</div>`;
+}
+
+function renderReferenceFeats() {
+  const q = $("#referenceFeatSearch").value.trim().toLowerCase();
+  const type = $("#referenceFeatType").value;
+  const source = $("#referenceFeatSource").value;
+  const feats = featCatalogue.filter(feat => {
+    const category = feat.category || "general";
+    if (type !== "all" && category !== type) return false;
+    if (source !== "all" && (feat.sourceShort || feat.source || "PHB 2014") !== source) return false;
+    if (q && !`${feat.name} ${feat.summary || ""} ${feat.prerequisiteText || ""} ${feat.sourceShort || feat.source || ""}`.toLowerCase().includes(q)) return false;
+    return true;
+  }).sort((a,b)=>a.name.localeCompare(b.name));
+  $("#referenceFeatCount").textContent = `${feats.length} feat${feats.length === 1 ? "" : "s"}`;
+  $("#referenceFeatList").innerHTML = feats.length ? feats.map(referenceFeatCard).join("") : `<div class="notice reference-empty">No feats match those filters.</div>`;
+}
+
+function referenceIsOpen() {
+  return $(".tab[data-tab=reference]")?.classList.contains("active");
+}
+
+function setReferenceMode(mode, render = true) {
+  referenceMode = mode === "feats" ? "feats" : "spells";
+  $$('[data-reference-mode]').forEach(button => {
+    const active = button.dataset.referenceMode === referenceMode;
+    button.classList.toggle("active", active);
+    button.setAttribute("aria-selected", String(active));
+  });
+  $("#referenceSpellsPanel").classList.toggle("hidden", referenceMode !== "spells");
+  $("#referenceFeatsPanel").classList.toggle("hidden", referenceMode !== "feats");
+  localStorage.setItem("noctis-reference-mode", referenceMode);
+  if (render && referenceIsOpen()) {
+    if (referenceMode === "spells") renderReferenceSpells();
+    else renderReferenceFeats();
+  }
+}
+
+function renderReference(force = false) {
+  populateReferenceFilters();
+  $("#referenceLibraryCount").textContent = `${referenceCatalogue.length} spells · ${featCatalogue.length} feats`;
+  setReferenceMode(localStorage.getItem("noctis-reference-mode") || referenceMode, false);
+  if (!force && !referenceIsOpen()) return;
+  if (referenceMode === "spells") renderReferenceSpells();
+  else renderReferenceFeats();
 }
 
 function renderFeats() {
@@ -467,6 +769,7 @@ async function commitLevelUp() {
     }
   }
   if (!confirm(`Advance Noctis from Wizard ${model.character.level} to Wizard ${target}? This updates the Google Sheet.`)) return;
+  setSheetStatus("syncing");
   const result = await api("/api/level-up", {method:"POST",body:JSON.stringify(body)});
   model.state = result.state;
   model.character = result.character;
@@ -477,6 +780,7 @@ async function commitLevelUp() {
 }
 
 async function updateState(patch) {
+  setSheetStatus("syncing");
   const result = await api("/api/state", { method:"PUT", body:JSON.stringify({...model.state,...patch}) });
   model.state = result.state;
   if (result.character) model.character = result.character;
@@ -486,11 +790,16 @@ async function updateState(patch) {
 async function castSpell(index, explicitLevel) {
   const spell = getSpell(index);
   if (!spell) return;
+  const currentConcentration = model.character.concentration ? getSpell(model.character.concentration) : null;
+  if (spell.concentration && currentConcentration && currentConcentration.index !== spell.index) {
+    if (!confirm(`Casting ${spell.name} will end concentration on ${currentConcentration.name}. Cast anyway?`)) return;
+  }
   let castLevel = explicitLevel;
   if (castLevel === undefined) {
     const select = document.querySelector(`[data-cast-select="${CSS.escape(index)}"]`);
     castLevel = Number(select?.value || spell.level || 0);
   }
+  setSheetStatus("syncing");
   const result = await api("/api/cast", { method:"POST", body:JSON.stringify({index,castLevel}) });
   model.state = result.state;
   model.character = result.character;
@@ -511,15 +820,19 @@ function showCastResult(cast) {
     ${hints.length?`<p class="muted">${hints.map(escapeHtml).join(" ")}</p>`:""}
     <div class="remaining-slots">${remaining}</div>`;
   $("#castResult").classList.remove("hidden");
-  $("#castResult").scrollIntoView({behavior:"smooth",block:"center"});
+  $("#castResult").scrollIntoView({behavior:window.matchMedia("(prefers-reduced-motion: reduce), (max-width: 900px)").matches ? "auto" : "smooth",block:"center"});
 }
 
-async function showDetails(index) {
-  const spell = getSpell(index) || await api(`/api/spells/${index}`);
+async function showDetails(index, reference = false) {
+  const spell = reference
+    ? (getReferenceSpell(index) || await api(`/api/reference/spells/${index}`))
+    : (getSpell(index) || await api(`/api/spells/${index}`));
   $("#spellDetail").innerHTML = `<div class="eyebrow">${escapeHtml(schoolName(spell))}</div><h2>${escapeHtml(spell.name)}</h2>
     <div class="detail-meta"><span class="badge">${Number(spell.level)===0?"Cantrip":`${ordinal(spell.level)} level`}</span><span class="badge">${escapeHtml(spell.casting_time||"")}</span><span class="badge">${escapeHtml(spell.range||"")}</span>${spell.concentration?`<span class="badge">Concentration</span>`:""}${spell.ritual?`<span class="badge">Ritual</span>`:""}</div>
     <p><b>Components:</b> ${escapeHtml(componentsText(spell))}</p>
     <p><b>Duration:</b> ${escapeHtml(spell.duration||"")}</p>
+    ${(spell.classes || []).length ? `<p><b>Classes:</b> ${escapeHtml((spell.classes || []).join(", "))}</p>` : ""}
+    <p><b>Source:</b> ${escapeHtml(spell.sourceShort || spell.source || "Unknown")}</p>
     <div class="detail-body"><p>${escapeHtml(spell.description || spellSummary(spell))}</p>${spell.higher_level?`<p><b>At higher levels:</b> ${escapeHtml(spell.higher_level)}</p>`:""}</div>`;
   $("#spellDialog").showModal();
 }
@@ -566,6 +879,7 @@ function openShortRest() {
 
 async function takeShortRest(useSelection=true) {
   const recover = useSelection && $("#recoveryChoice").value ? $("#recoveryChoice").value.split(",").map(Number) : [];
+  setSheetStatus("syncing");
   const result = await api("/api/rest", {method:"POST",body:JSON.stringify({type:"short",recover})});
   model.state=result.state; model.character=result.character;
   $("#shortRestDialog").close(); renderAll(); toast(recover.length?"Short rest taken — Arcane Recovery used":"Short rest taken");
@@ -580,26 +894,58 @@ function readInventoryDraftFromDom() {
   }));
 }
 
-if (!verifyUiVersion()) {
-  // The page is reloading to pick up matching static assets.
-  throw new Error("Refreshing updated interface…");
-}
+const UI_READY = verifyUiVersion();
 
 // Navigation
 $$('.tab').forEach(btn => btn.onclick = () => {
-  $$('.tab').forEach(x=>x.classList.toggle('active',x===btn));
+  $$('.tab').forEach(x=>{
+    const active = x === btn;
+    x.classList.toggle('active', active);
+    x.setAttribute('aria-selected', String(active));
+    x.tabIndex = active ? 0 : -1;
+  });
   $$('.view').forEach(v=>v.classList.toggle('active',v.id===btn.dataset.tab));
+  history.replaceState(null, "", `#${btn.dataset.tab}`);
+  if (btn.dataset.tab === "reference" && model) renderReference(true);
 });
+
+function activateInitialTab() {
+  const wanted = location.hash.replace(/^#/, "");
+  const btn = wanted ? $(`.tab[data-tab="${CSS.escape(wanted)}"]`) : null;
+  if (btn) btn.click();
+}
+
+$(".tabs").addEventListener("keydown", e => {
+  if (!["ArrowLeft","ArrowRight","Home","End"].includes(e.key)) return;
+  const tabs = $$(".tab");
+  const current = tabs.indexOf(document.activeElement);
+  if (current < 0) return;
+  e.preventDefault();
+  let next = current;
+  if (e.key === "ArrowLeft") next = (current - 1 + tabs.length) % tabs.length;
+  if (e.key === "ArrowRight") next = (current + 1) % tabs.length;
+  if (e.key === "Home") next = 0;
+  if (e.key === "End") next = tabs.length - 1;
+  tabs[next].focus();
+  tabs[next].click();
+});
+
 
 // Event delegation for dynamically-rendered cards and inventory rows.
 document.addEventListener("click", async e => {
   const btn = e.target.closest("[data-action]");
-  if (!btn) return;
+  if (!btn || btn.disabled) return;
   const action = btn.dataset.action;
   const index = btn.dataset.index;
+  btn.disabled = true;
+  btn.setAttribute("aria-busy", "true");
   try {
     if (action === "learn") { await updateState({known:[...new Set([...model.state.known,index])]}); toast("Added to spellbook and synced to the DM sheet"); }
-    if (action === "forget") { await updateState({known:model.state.known.filter(x=>x!==index),prepared:model.state.prepared.filter(x=>x!==index)}); toast("Removed and sheet updated"); }
+    if (action === "forget") {
+      const spell = getSpell(index);
+      if (!confirm(`Remove ${spell?.name || "this spell"} from the spellbook?${model.state.prepared.includes(index) ? " It is currently prepared." : ""}`)) return;
+      await updateState({known:model.state.known.filter(x=>x!==index),prepared:model.state.prepared.filter(x=>x!==index)}); toast("Removed and sheet updated");
+    }
     if (action === "prepare") {
       const isPrepared=model.state.prepared.includes(index);
       if (!isPrepared && model.state.prepared.length>=model.character.preparedMax) return toast(`You can prepare ${model.character.preparedMax} spells`);
@@ -608,16 +954,52 @@ document.addEventListener("click", async e => {
     }
     if (action === "cast") await castSpell(index, btn.dataset.castLevel !== undefined ? Number(btn.dataset.castLevel) : undefined);
     if (action === "details") await showDetails(index);
+    if (action === "reference-details") await showDetails(index, true);
     if (action === "remove-item") { readInventoryDraftFromDom(); inventoryDraft.splice(Number(btn.dataset.row),1); renderInventory(); }
     if (action === "show-more") { discoverLimit += 24; renderDiscover(); }
-  } catch (err) { toast(err.message); }
+    if (action === "reference-spell-more") { referenceSpellLimit += 36; renderReferenceSpells(); }
+    if (action === "roll-check") rollCheck(btn.dataset.rollLabel || "Check", Number(btn.dataset.rollMod || 0));
+    if (action === "condition-remove") await campaignAction("condition-remove", {condition:btn.dataset.condition});
+    if (action === "end-concentration") await campaignAction("concentration-end");
+    if (action === "keep-concentration") { $("#concentrationCheck").classList.add("hidden"); toast("Concentration maintained"); }
+    if (action === "death-success") { const next=Number(btn.dataset.count); await campaignAction("death-saves", {successes:(model.character.deathSaves?.successes===next?next-1:next), failures:model.character.deathSaves?.failures||0}); }
+    if (action === "death-failure") { const next=Number(btn.dataset.count); await campaignAction("death-saves", {successes:model.character.deathSaves?.successes||0, failures:(model.character.deathSaves?.failures===next?next-1:next)}); }
+    if (action === "edit-ac") { const value=prompt("Armour Class", String(model.character.ac)); if (value!==null) await campaignAction("ac", {value:Number(value)}); }
+    if (action === "edit-max-hp") { const value=prompt("Maximum HP", String(model.character.hp?.max||1)); if (value!==null) await campaignAction("max-hp", {value:Number(value)}); }
+  } catch (err) {
+    setSheetStatus("error");
+    toast(err.message, "error");
+  } finally {
+    if (btn.isConnected) { btn.disabled = false; btn.removeAttribute("aria-busy"); }
+  }
 });
+
+$$('[data-health-amount]').forEach(btn => btn.onclick = () => { $("#healthAmount").value = btn.dataset.healthAmount; });
+$("#takeDamage").onclick = e => withButtonBusy(e.currentTarget, () => campaignAction("damage", {amount:Number($("#healthAmount").value)}), "Applying…").catch(err=>{setSheetStatus("error");toast(err.message,"error")});
+$("#healDamage").onclick = e => withButtonBusy(e.currentTarget, () => campaignAction("heal", {amount:Number($("#healthAmount").value)}), "Healing…").catch(err=>{setSheetStatus("error");toast(err.message,"error")});
+$("#setTempHp").onclick = e => withButtonBusy(e.currentTarget, () => campaignAction("temp-hp", {amount:Number($("#tempHpInput").value)}), "Saving…").catch(err=>{setSheetStatus("error");toast(err.message,"error")});
+$("#inspirationToggle").onclick = e => withButtonBusy(e.currentTarget, () => campaignAction("inspiration"), "").catch(err=>{setSheetStatus("error");toast(err.message,"error")});
+$("#spendHitDie").onclick = e => withButtonBusy(e.currentTarget, () => campaignAction("hit-die").then(r=>{$("#lastHitDieRoll").textContent=r.message||"";}), "Rolling…").catch(err=>{setSheetStatus("error");toast(err.message,"error")});
+$("#resetDeathSaves").onclick = e => withButtonBusy(e.currentTarget, () => campaignAction("death-saves", {successes:0,failures:0}), "Resetting…").catch(err=>{setSheetStatus("error");toast(err.message,"error")});
+$("#addCondition").onclick = e => { const condition=$("#conditionSelect").value; if(condition) withButtonBusy(e.currentTarget, () => campaignAction("condition-add", {condition}), "Adding…").catch(err=>{setSheetStatus("error");toast(err.message,"error")}); };
+$("#exhaustionLevel").onchange = () => campaignAction("exhaustion", {level:Number($("#exhaustionLevel").value)}).catch(err=>{setSheetStatus("error");toast(err.message,"error")});
 
 $("#bookSearch").addEventListener("input",renderSpellbook);
 $("#spellSearch").addEventListener("input",()=>{discoverLimit=24;renderDiscover();});
 $("#levelFilter").addEventListener("change",()=>{discoverLimit=24;renderDiscover();});
 $("#schoolFilter").addEventListener("change",()=>{discoverLimit=24;renderDiscover();});
 $("#featSearch").addEventListener("input",renderFeats);
+$$('[data-roll-mode]').forEach(button => button.addEventListener("click", () => setRollMode(button.dataset.rollMode)));
+$("#initiativeRoll").addEventListener("click", () => rollCheck("Initiative", Number(model?.character?.initiative || 0)));
+$$('[data-reference-mode]').forEach(button => button.addEventListener("click", () => setReferenceMode(button.dataset.referenceMode)));
+["#referenceSpellSearch","#referenceSpellLevel","#referenceSpellSchool","#referenceSpellClass","#referenceSpellSource","#referenceSpellTrait"].forEach(selector => {
+  const el = $(selector); el.addEventListener(el.tagName === "INPUT" ? "input" : "change", () => { referenceSpellLimit = window.matchMedia("(max-width: 700px)").matches ? 36 : 72; renderReferenceSpells(); });
+});
+["#referenceFeatSearch","#referenceFeatType","#referenceFeatSource"].forEach(selector => {
+  const el = $(selector); el.addEventListener(el.tagName === "INPUT" ? "input" : "change", renderReferenceFeats);
+});
+$("#referenceSpellClear").onclick = () => { $("#referenceSpellSearch").value=""; $("#referenceSpellLevel").value="all"; $("#referenceSpellSchool").value="all"; $("#referenceSpellClass").value="all"; $("#referenceSpellSource").value="all"; $("#referenceSpellTrait").value="all"; referenceSpellLimit = window.matchMedia("(max-width: 700px)").matches ? 36 : 72; renderReferenceSpells(); };
+$("#referenceFeatClear").onclick = () => { $("#referenceFeatSearch").value=""; $("#referenceFeatType").value="all"; $("#referenceFeatSource").value="all"; renderReferenceFeats(); };
 $("#closeDialog").onclick=()=>$("#spellDialog").close();
 $("#closeShortRest").onclick=()=>$("#shortRestDialog").close();
 $("#levelSpell1").addEventListener("change",selectedLevelSpellPreview);
@@ -625,32 +1007,34 @@ $("#levelSpell2").addEventListener("change",selectedLevelSpellPreview);
 $("#levelFeat").addEventListener("change",selectedFeatPreview);
 $$("input[name=advancement]").forEach(x=>x.addEventListener("change",updateAdvancementPanels));
 $("#asiMode").addEventListener("change",updateAdvancementPanels);
-$("#commitLevelUp").onclick=()=>commitLevelUp().catch(e=>toast(e.message));
+$("#commitLevelUp").onclick=e=>withButtonBusy(e.currentTarget, () => commitLevelUp(), "Leveling…").catch(err=>toast(err.message,"error"));
 
 $("#shortRest").onclick=openShortRest;
 $("#arcaneRecoveryStatus").onclick=openShortRest;
-$("#confirmShortRest").onclick=()=>takeShortRest(true).catch(e=>toast(e.message));
-$("#shortRestNoRecovery").onclick=()=>takeShortRest(false).catch(e=>toast(e.message));
-$("#longRest").onclick=async()=>{
-  if (!confirm("Take a long rest? This restores all spell slots and resets Arcane Recovery.")) return;
-  try { const r=await api("/api/rest",{method:"POST",body:JSON.stringify({type:"long"})}); model.state=r.state; model.character=r.character; renderAll(); toast("Long rest complete — spell slots restored"); } catch(e){toast(e.message)}
+$("#confirmShortRest").onclick=e=>withButtonBusy(e.currentTarget, () => takeShortRest(true), "Resting…").catch(err=>toast(err.message,"error"));
+$("#shortRestNoRecovery").onclick=e=>withButtonBusy(e.currentTarget, () => takeShortRest(false), "Resting…").catch(err=>toast(err.message,"error"));
+$("#longRest").onclick=async e=>{
+  if (!confirm("Take a long rest? This restores HP and spell slots, clears temporary HP/death saves, regains Hit Dice, resets Arcane Recovery, and reduces exhaustion by 1.")) return;
+  await withButtonBusy(e.currentTarget, async () => {
+    setSheetStatus("syncing");
+    const r=await api("/api/rest",{method:"POST",body:JSON.stringify({type:"long"})});
+    model.state=r.state; model.character=r.character; renderAll();
+    toast("Long rest complete — HP, slots and rest resources restored");
+  }, "Resting…").catch(err=>toast(err.message,"error"));
 };
 
 $("#addInventoryRow").onclick=()=>{readInventoryDraftFromDom();inventoryDraft.push({qty:"1",name:"",cost:"",weight:""});renderInventory();};
-$("#saveInventory").onclick=async()=>{
-  try {
-    readInventoryDraftFromDom();
-    const items=inventoryDraft.filter(x=>x.name||x.qty||x.cost||x.weight);
-    const coins={cp:$("#coinCp").value,sp:$("#coinSp").value,ep:$("#coinEp").value,gp:$("#coinGp").value,pp:$("#coinPp").value};
-    await api("/api/inventory",{method:"PUT",body:JSON.stringify({items,coins})});
-    inventory={items,coins}; inventoryDraft=items.map(x=>({...x})); renderInventory(); toast("Inventory saved to BAG sheet");
-  } catch(e){toast(e.message)}
-};
+$("#saveInventory").onclick=e=>withButtonBusy(e.currentTarget, async()=>{
+  readInventoryDraftFromDom();
+  const items=inventoryDraft.filter(x=>String(x.name || "").trim());
+  const coins={cp:$("#coinCp").value,sp:$("#coinSp").value,ep:$("#coinEp").value,gp:$("#coinGp").value,pp:$("#coinPp").value};
+  setSheetStatus("syncing");
+  await api("/api/inventory",{method:"PUT",body:JSON.stringify({items,coins})});
+  inventory={items,coins}; inventoryDraft=items.map(x=>({...x})); renderInventory(); toast("Inventory saved to BAG sheet");
+}, "Saving…").catch(err=>toast(err.message,"error"));
 
-$("#saveSettings").onclick=async()=>{
-  try { await updateState({settings:{...model.state.settings,level:$("#levelSetting").value,intScore:$("#intSetting").value}}); toast("Settings saved"); } catch(e){toast(e.message)}
-};
-$("#syncSheet").onclick=async()=>{try{await api("/api/sync",{method:"POST"});toast("SPELLS, SpellBook and feats rebuilt from companion state");}catch(e){toast(e.message)}};
+$("#saveSettings").onclick=e=>withButtonBusy(e.currentTarget, async()=>{ await updateState({settings:{...model.state.settings,level:$("#levelSetting").value,intScore:$("#intSetting").value}}); toast("Settings saved"); }, "Saving…").catch(err=>toast(err.message,"error"));
+$("#syncSheet").onclick=e=>withButtonBusy(e.currentTarget, async()=>{ setSheetStatus("syncing"); await api("/api/sync",{method:"POST"}); setSheetStatus("synced"); toast("SPELLS, SpellBook and feats rebuilt from companion state"); }, "Syncing…").catch(err=>{setSheetStatus("error");toast(err.message,"error")});
 $("#logout").onclick=async()=>{await api("/api/logout",{method:"POST"});location.reload();};
 
 $("#loginForm").onsubmit=async e=>{
@@ -659,7 +1043,8 @@ $("#loginForm").onsubmit=async e=>{
   catch(err){$("#loginError").textContent=err.message;}
 };
 
-boot().catch(err=>{
-  if (err.message === "Refreshing updated interface…") return;
+$$('.tab').forEach((tab,i)=>{ tab.setAttribute('aria-selected', String(i===0)); tab.tabIndex = i===0 ? 0 : -1; });
+
+if (UI_READY) boot().catch(err=>{
   document.body.innerHTML = `<main class="content-shell"><div class="panel" style="max-width:760px;margin:8vh auto"><div class="eyebrow">STARTUP ERROR · v${UI_VERSION}</div><h2 style="margin:.45rem 0 1rem">Companion failed to start</h2><p class="muted" style="line-height:1.6">${escapeHtml(err.message)}</p><button class="primary" style="margin-top:1rem" onclick="location.reload()">Reload companion</button></div></main>`;
 });

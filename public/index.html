@@ -6,7 +6,7 @@
   <meta name="theme-color" content="#0a0910" />
   <meta name="color-scheme" content="dark" />
   <title>Noctis — Necromancer's Grimoire</title>
-  <link rel="stylesheet" href="/styles.css?v=5" />
+  <link rel="stylesheet" href="/styles.css?v=10.0" />
 </head>
 <body>
   <div class="ambient ambient-a"></div>
@@ -64,19 +64,96 @@
         </div>
       </div>
 
-      <nav class="tabs" aria-label="Companion sections">
-        <button class="tab active" data-tab="play"><span class="tab-icon">✦</span><span>Play</span></button>
-        <button class="tab" data-tab="spellbook"><span class="tab-icon">▤</span><span>Spellbook</span></button>
-        <button class="tab" data-tab="discover"><span class="tab-icon">＋</span><span>Learn Spells</span></button>
-        <button class="tab" data-tab="inventory"><span class="tab-icon">◇</span><span>Inventory</span></button>
-        <button class="tab" data-tab="feats"><span class="tab-icon">◆</span><span>Feats</span></button>
-        <button class="tab" data-tab="levelup"><span class="tab-icon">↑</span><span>Level Up</span></button>
-        <button class="tab" data-tab="settings"><span class="tab-icon">⚙</span><span>Settings</span></button>
+      <nav class="tabs" role="tablist" aria-label="Companion sections">
+        <button class="tab active" role="tab" aria-label="Character" title="Character" aria-controls="character" data-tab="character"><span class="tab-icon">♥</span><span>Character</span></button>
+        <button class="tab" role="tab" aria-label="Spells" title="Spells" aria-controls="play" data-tab="play"><span class="tab-icon">✦</span><span>Spells</span></button>
+        <button class="tab" role="tab" aria-label="Spellbook" title="Spellbook" aria-controls="spellbook" data-tab="spellbook"><span class="tab-icon">▤</span><span>Spellbook</span></button>
+        <button class="tab" role="tab" aria-label="Learn Spells" title="Learn Spells" aria-controls="discover" data-tab="discover"><span class="tab-icon">＋</span><span>Learn Spells</span></button>
+        <button class="tab" role="tab" aria-label="Inventory" title="Inventory" aria-controls="inventory" data-tab="inventory"><span class="tab-icon">◇</span><span>Inventory</span></button>
+        <button class="tab" role="tab" aria-label="Feats" title="Feats" aria-controls="feats" data-tab="feats"><span class="tab-icon">◆</span><span>Feats</span></button>
+        <button class="tab" role="tab" aria-label="Reference" title="Reference" aria-controls="reference" data-tab="reference"><span class="tab-icon">⌕</span><span>Reference</span></button>
+        <button class="tab" role="tab" aria-label="Level Up" title="Level Up" aria-controls="levelup" data-tab="levelup"><span class="tab-icon">↑</span><span>Level Up</span></button>
+        <button class="tab" role="tab" aria-label="Settings" title="Settings" aria-controls="settings" data-tab="settings"><span class="tab-icon">⚙</span><span>Settings</span></button>
       </nav>
     </header>
 
     <main class="content-shell">
-      <section id="play" class="view active">
+      <section id="character" class="view active" role="tabpanel">
+        <div class="page-heading">
+          <div>
+            <div class="eyebrow">LIVE CHARACTER</div>
+            <h2>Campaign Dashboard</h2>
+            <p class="page-lede">The numbers you reach for during play, with damage, healing and rest resources kept in sync with the character sheet.</p>
+          </div>
+          <div id="sheetSyncStatus" class="resource-pill" role="status" aria-live="polite">✓ Sheet synced</div>
+        </div>
+
+        <div class="vital-strip">
+          <div class="vital-card hp-vital"><span>Hit Points</span><strong><b id="currentHp">0</b> / <b id="maxHp">0</b></strong><small id="tempHpSummary">No temporary HP</small></div>
+          <div class="vital-card"><span>Armour Class</span><strong id="combatAc">—</strong><small>AC</small></div>
+          <button id="initiativeRoll" class="vital-card roll-vital" type="button" title="Roll initiative"><span>Initiative</span><strong id="combatInitiative">—</strong><small>Tap to roll</small></button>
+          <div class="vital-card"><span>Speed</span><strong id="combatSpeed">—</strong><small>feet</small></div>
+          <button id="inspirationToggle" class="vital-card inspiration-vital" type="button"><span>Inspiration</span><strong id="inspirationStatus">○</strong><small>Tap to toggle</small></button>
+        </div>
+
+        <div class="campaign-grid">
+          <div class="panel health-panel">
+            <div class="panel-heading"><div><span class="panel-kicker">HEALTH</span><h3>Damage & Healing</h3></div><div class="panel-glyph">♥</div></div>
+            <div class="hp-meter"><div id="hpMeterFill"></div></div>
+            <div class="hp-numbers"><strong><span id="hpBigCurrent">0</span> / <span id="hpBigMax">0</span> HP</strong><span id="hpTempBadge">0 temp</span></div>
+            <div class="health-action-row">
+              <input id="healthAmount" type="number" min="1" step="1" value="1" inputmode="numeric" aria-label="Damage or healing amount" />
+              <button id="takeDamage" class="damage-button">Take Damage</button>
+              <button id="healDamage" class="heal-button">Heal</button>
+            </div>
+            <div class="quick-amounts" aria-label="Quick amount buttons">
+              <button data-health-amount="1">1</button><button data-health-amount="5">5</button><button data-health-amount="10">10</button><button data-health-amount="20">20</button>
+            </div>
+            <div class="temp-hp-row"><label>Temporary HP <input id="tempHpInput" type="number" min="0" step="1" inputmode="numeric" /></label><button id="setTempHp" class="secondary small">Set</button></div>
+            <div id="concentrationCheck" class="concentration-check hidden"></div>
+          </div>
+
+          <div class="panel survival-panel">
+            <div class="panel-heading compact-heading"><div><span class="panel-kicker">SURVIVAL</span><h3>Hit Dice & Death Saves</h3></div></div>
+            <div class="hit-dice-block"><div><span>Hit Dice</span><strong id="hitDiceSummary">0 / 0 d6</strong></div><button id="spendHitDie" class="secondary">Roll & Spend Hit Die</button></div>
+            <div id="lastHitDieRoll" class="muted compact"></div>
+            <div class="death-save-block">
+              <div><span>Successes</span><div id="deathSuccesses" class="death-pips"></div></div>
+              <div><span>Failures</span><div id="deathFailures" class="death-pips failures"></div></div>
+            </div>
+            <button id="resetDeathSaves" class="ghost-danger small">Reset Death Saves</button>
+          </div>
+
+          <div class="panel combat-reference-panel">
+            <div class="panel-heading compact-heading"><div><span class="panel-kicker">QUICK REFERENCE</span><h3>Combat Stats</h3></div></div>
+            <div id="combatReference" class="reference-grid"></div>
+            <div class="roll-toolbar" aria-label="D20 roll mode">
+              <span>Roll mode</span>
+              <div class="roll-mode-group" role="group" aria-label="Choose normal, advantage, or disadvantage">
+                <button type="button" data-roll-mode="normal" class="active" aria-pressed="true">Normal</button>
+                <button type="button" data-roll-mode="advantage" aria-pressed="false">Advantage</button>
+                <button type="button" data-roll-mode="disadvantage" aria-pressed="false">Disadvantage</button>
+              </div>
+            </div>
+            <div id="rollResult" class="roll-result hidden" role="status" aria-live="polite"></div>
+            <div class="ability-strip" id="abilityStrip"></div>
+          </div>
+
+          <div class="panel status-panel">
+            <div class="panel-heading compact-heading"><div><span class="panel-kicker">ACTIVE EFFECTS</span><h3>Concentration & Conditions</h3></div></div>
+            <div id="concentrationCard" class="concentration-card"></div>
+            <div class="condition-toolbar"><select id="conditionSelect"><option value="">Add condition…</option></select><button id="addCondition" class="secondary small">Add</button></div>
+            <div id="conditionList" class="condition-list"></div>
+            <label class="exhaustion-control">Exhaustion <select id="exhaustionLevel"><option value="0">None</option><option value="1">1</option><option value="2">2</option><option value="3">3</option><option value="4">4</option><option value="5">5</option><option value="6">6</option></select></label>
+          </div>
+        </div>
+
+        <div class="section-divider"></div>
+        <div class="page-heading page-heading-compact"><div><div class="eyebrow">CHECKS AT A GLANCE</div><h2>Saving Throws & Skills</h2><p class="page-lede">Tap any ability, save, skill, or Initiative to roll a d20 with the correct modifier already applied.</p></div></div>
+        <div class="checks-layout"><div class="panel"><div class="panel-kicker">SAVING THROWS</div><div id="saveList" class="check-list"></div></div><div class="panel"><div class="panel-kicker">SKILLS</div><div id="skillList" class="check-list skill-list"></div></div></div>
+      </section>
+
+      <section id="play" class="view" role="tabpanel">
         <div class="page-heading">
           <div>
             <div class="eyebrow">LIVE GAMEPLAY</div>
@@ -127,7 +204,7 @@
         <div id="preparedList" class="spell-grid gameplay-grid"></div>
       </section>
 
-      <section id="spellbook" class="view">
+      <section id="spellbook" class="view" role="tabpanel">
         <div class="page-heading">
           <div>
             <div class="eyebrow">YOUR SPELLBOOK</div>
@@ -140,7 +217,7 @@
         <div id="bookList" class="spell-grid"></div>
       </section>
 
-      <section id="discover" class="view">
+      <section id="discover" class="view" role="tabpanel">
         <div class="page-heading">
           <div>
             <div class="eyebrow">PLAYER'S HANDBOOK · 2014</div>
@@ -157,7 +234,7 @@
         <div id="discoverList" class="spell-grid"></div>
       </section>
 
-      <section id="inventory" class="view">
+      <section id="inventory" class="view" role="tabpanel">
         <div class="page-heading">
           <div>
             <div class="eyebrow">BAG · GOOGLE SHEET</div>
@@ -198,7 +275,7 @@
         </div>
       </section>
 
-      <section id="feats" class="view">
+      <section id="feats" class="view" role="tabpanel">
         <div class="page-heading">
           <div>
             <div class="eyebrow">CHARACTER OPTIONS · PHB 2014</div>
@@ -219,7 +296,56 @@
         </div>
       </section>
 
-      <section id="levelup" class="view">
+      <section id="reference" class="view" role="tabpanel">
+        <div class="page-heading reference-heading">
+          <div>
+            <div class="eyebrow">READ-ONLY RULES LIBRARY</div>
+            <h2>Spell &amp; Feat Reference</h2>
+            <p class="page-lede">Hand the screen around the table safely. Browse the companion's rules catalogue without changing Noctis.</p>
+          </div>
+          <div class="reference-count" id="referenceLibraryCount"></div>
+        </div>
+
+        <div class="reference-switch" role="tablist" aria-label="Reference type">
+          <button class="reference-switch-button active" data-reference-mode="spells" role="tab" aria-selected="true">✦ Spells</button>
+          <button class="reference-switch-button" data-reference-mode="feats" role="tab" aria-selected="false">◆ Feats</button>
+        </div>
+
+        <div id="referenceSpellsPanel" class="reference-panel-view">
+          <div class="panel reference-tools-panel">
+            <div class="reference-search-row">
+              <div class="search-wrap reference-main-search"><span>⌕</span><input id="referenceSpellSearch" class="search" placeholder="Search spell name, effect, school…" autocomplete="off" /></div>
+              <button id="referenceSpellClear" class="secondary small reference-clear" type="button">Clear</button>
+            </div>
+            <div class="reference-filter-row">
+              <label>Level<select id="referenceSpellLevel"><option value="all">All levels</option></select></label>
+              <label>School<select id="referenceSpellSchool"><option value="all">All schools</option></select></label>
+              <label>Class<select id="referenceSpellClass"><option value="all">All classes</option></select></label>
+              <label>Source<select id="referenceSpellSource"><option value="all">All sources</option></select></label>
+              <label>Type<select id="referenceSpellTrait"><option value="all">All spells</option><option value="ritual">Rituals</option><option value="concentration">Concentration</option><option value="reaction">Reactions</option><option value="bonus">Bonus actions</option></select></label>
+            </div>
+          </div>
+          <div class="reference-results-bar"><span id="referenceSpellCount"></span><span class="muted">Party-wide reference: PHB 2014 + Ryoko. This library is read-only and does not change what Noctis can learn.</span></div>
+          <div id="referenceSpellList" class="reference-card-grid"></div>
+        </div>
+
+        <div id="referenceFeatsPanel" class="reference-panel-view hidden">
+          <div class="panel reference-tools-panel">
+            <div class="reference-search-row">
+              <div class="search-wrap reference-main-search"><span>⌕</span><input id="referenceFeatSearch" class="search" placeholder="Search feat name, benefit, prerequisite…" autocomplete="off" /></div>
+              <button id="referenceFeatClear" class="secondary small reference-clear" type="button">Clear</button>
+            </div>
+            <div class="reference-filter-row reference-filter-row-feats">
+              <label>Type<select id="referenceFeatType"><option value="all">All feats</option><option value="general">General feats</option><option value="racial">Racial feats</option></select></label>
+              <label>Source<select id="referenceFeatSource"><option value="all">All sources</option></select></label>
+            </div>
+          </div>
+          <div class="reference-results-bar"><span id="referenceFeatCount"></span><span class="muted">Reference mode ignores Noctis eligibility so every catalogue feat remains readable.</span></div>
+          <div id="referenceFeatList" class="reference-feat-grid"></div>
+        </div>
+      </section>
+
+      <section id="levelup" class="view" role="tabpanel">
         <div class="page-heading">
           <div>
             <div class="eyebrow">WIZARD PROGRESSION · 2014</div>
@@ -303,7 +429,7 @@
         <div id="levelCards" class="level-grid progression-grid"></div>
       </section>
 
-      <section id="settings" class="view">
+      <section id="settings" class="view" role="tabpanel">
         <div class="page-heading"><div><div class="eyebrow">COMPANION SETTINGS</div><h2>Sheet Sync</h2><p class="page-lede">Normally the sheet is authoritative. Overrides are here for troubleshooting and deliberate changes.</p></div></div>
         <div class="settings-grid">
           <div class="panel settings-panel">
@@ -343,6 +469,6 @@
   </dialog>
 
   <div id="toast" class="toast" role="status" aria-live="polite"></div>
-  <script src="/app.js?v=6.0" defer></script>
+  <script src="/app.js?v=10.0" defer></script>
 </body>
 </html>

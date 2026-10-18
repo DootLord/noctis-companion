@@ -842,16 +842,21 @@
       "name": "Illusion"
     },
     "ritual": false,
-    "casting_time": "",
-    "range": "",
-    "components": [],
+    "casting_time": "1 action",
+    "range": "Self",
+    "components": [
+      "V",
+      "S"
+    ],
     "material": "",
-    "duration": "",
+    "duration": "1 hour",
     "concentration": false,
-    "description": "",
-    "desc": [],
+    "description": "You cloak yourself, including your clothing and carried equipment, in an illusion that changes how you look. You can appear about a foot taller or shorter and can alter apparent build, clothing, armour, weapons, and other visible details. The illusion does not withstand physical inspection, and a creature can use its action to inspect you and make an Intelligence (Investigation) check against your spell save DC to recognise the disguise.",
+    "desc": [
+      "You cloak yourself, including your clothing and carried equipment, in an illusion that changes how you look. You can appear about a foot taller or shorter and can alter apparent build, clothing, armour, weapons, and other visible details. The illusion does not withstand physical inspection, and a creature can use its action to inspect you and make an Intelligence (Investigation) check against your spell save DC to recognise the disguise."
+    ],
     "higher_level": "",
-    "summary": "",
+    "summary": "Create an illusory disguise over yourself and your equipment for 1 hour. Physical interaction can reveal it; a suspicious creature can inspect the illusion against your spell save DC.",
     "source": "Player's Handbook (2014) supplied by user",
     "sourceShort": "PHB 2014",
     "source_book": "Player's Handbook",
@@ -6346,16 +6351,22 @@
       "name": "Evocation"
     },
     "ritual": false,
-    "casting_time": "",
-    "range": "",
-    "components": [],
-    "material": "",
-    "duration": "",
-    "concentration": false,
-    "description": "",
-    "desc": [],
+    "casting_time": "1 action",
+    "range": "60 feet",
+    "components": [
+      "V",
+      "S",
+      "M"
+    ],
+    "material": "a miniature platinum sword with a grip and pommel of copper and zinc, worth 250 gp",
+    "duration": "Concentration, up to 1 minute",
+    "concentration": true,
+    "description": "You create a sword-shaped plane of force within range. When it appears, make a melee spell attack against a target within 5 feet of the sword; on a hit, the target takes 3d10 force damage. Until the spell ends, you can use a bonus action on each of your turns to move the sword up to 20 feet and repeat the attack against a target within 5 feet of it.",
+    "desc": [
+      "You create a sword-shaped plane of force within range. When it appears, make a melee spell attack against a target within 5 feet of the sword; on a hit, the target takes 3d10 force damage. Until the spell ends, you can use a bonus action on each of your turns to move the sword up to 20 feet and repeat the attack against a target within 5 feet of it."
+    ],
     "higher_level": "",
-    "summary": "",
+    "summary": "Conjure a floating force sword. It attacks for 3d10 force damage when created, and each turn you can use a bonus action to move it up to 20 feet and attack again.",
     "source": "Player's Handbook (2014) supplied by user",
     "sourceShort": "PHB 2014",
     "source_book": "Player's Handbook",
@@ -6767,16 +6778,22 @@
       "name": "Enchantment"
     },
     "ritual": false,
-    "casting_time": "",
-    "range": "",
-    "components": [],
-    "material": "",
-    "duration": "",
+    "casting_time": "1 action",
+    "range": "150 feet",
+    "components": [
+      "V",
+      "S",
+      "M"
+    ],
+    "material": "a handful of clay, crystal, glass, or mineral spheres",
+    "duration": "Instantaneous",
     "concentration": false,
-    "description": "",
-    "desc": [],
+    "description": "You assault a creature’s mind. The target takes 4d6 psychic damage and must make an Intelligence saving throw. On a failure, its Intelligence and Charisma scores become 1, and it cannot cast spells, activate magic items, understand language, or communicate intelligibly, though it can still identify and protect allies. After 30 days it can repeat the save, repeating every 30 days until it succeeds; certain powerful restorative magic can end the effect sooner.",
+    "desc": [
+      "You assault a creature’s mind. The target takes 4d6 psychic damage and must make an Intelligence saving throw. On a failure, its Intelligence and Charisma scores become 1, and it cannot cast spells, activate magic items, understand language, or communicate intelligibly, though it can still identify and protect allies. After 30 days it can repeat the save, repeating every 30 days until it succeeds; certain powerful restorative magic can end the effect sooner."
+    ],
     "higher_level": "",
-    "summary": "",
+    "summary": "Deal 4d6 psychic damage and force an Intelligence save. On a failure, the target’s Intelligence and Charisma become 1 and it loses meaningful spellcasting, magic-item activation, language comprehension, and speech until the effect is ended.",
     "source": "Player's Handbook (2014) supplied by user",
     "sourceShort": "PHB 2014",
     "source_book": "Player's Handbook",
