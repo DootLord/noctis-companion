@@ -28,6 +28,15 @@ A successful response is:
 
 ## What this version does
 
+### Mobile QoL
+
+- Dedicated viewport-level bottom navigation that is not nested inside the sticky header.
+- Five stable primary actions on phones: Character, Spells, Inventory, Reference, and More.
+- Less-used sections live in a touch-friendly More sheet instead of squeezing nine icons across the screen.
+- Safe-area support for notched iPhones plus virtual-keyboard handling on supported mobile browsers.
+- Re-selecting the current tab jumps to the top; switching tabs preserves each tab's previous scroll position.
+- Larger touch targets, mobile-safe 16px form controls, compact dialogs, and extra bottom spacing prevent controls from being obscured.
+
 ### Gameplay
 
 - Shows Noctis' prepared spells and known cantrips as expanded cards — no need to click a spell just to remember what it does.

@@ -1,4 +1,4 @@
-const UI_VERSION = "10.0.0";
+const UI_VERSION = "11.0.0";
 const $ = q => document.querySelector(q);
 const $$ = q => [...document.querySelectorAll(q)];
 
@@ -9,7 +9,8 @@ const REQUIRED_UI = [
   "#ownedFeats", "#featCatalogue", "#levelUpForm", "#nextLevelSummary", "#levelSpell1", "#levelSpell2",
   "#levelFilter", "#schoolFilter", "#bookSearch", "#spellSearch", "#featSearch", "#castResult", "#toast",
   "#referenceSpellSearch", "#referenceSpellLevel", "#referenceSpellSchool", "#referenceSpellClass", "#referenceSpellSource", "#referenceSpellTrait",
-  "#referenceSpellList", "#rollResult", "#referenceFeatSearch", "#referenceFeatType", "#referenceFeatSource", "#referenceFeatList"
+  "#referenceSpellList", "#rollResult", "#referenceFeatSearch", "#referenceFeatType", "#referenceFeatSource", "#referenceFeatList",
+  "#mobileNav", "#mobileMoreButton", "#mobileMoreDialog", "#closeMobileMore"
 ];
 
 function verifyUiVersion() {
@@ -897,22 +898,61 @@ function readInventoryDraftFromDom() {
 const UI_READY = verifyUiVersion();
 
 // Navigation
-$$('.tab').forEach(btn => btn.onclick = () => {
+const MOBILE_PRIMARY_TABS = new Set(["character", "play", "inventory", "reference"]);
+const tabScrollPositions = new Map();
+let activeTabName = "character";
+
+function syncMobileNavigation(name) {
+  $$('[data-mobile-tab]').forEach(button => {
+    const active = button.dataset.mobileTab === name;
+    button.classList.toggle("active", active);
+    if (button.closest(".mobile-nav")) {
+      if (active) button.setAttribute("aria-current", "page");
+      else button.removeAttribute("aria-current");
+    }
+  });
+  const moreActive = !MOBILE_PRIMARY_TABS.has(name);
+  $("#mobileMoreButton").classList.toggle("active", moreActive);
+  if (moreActive) $("#mobileMoreButton").setAttribute("aria-current", "page");
+  else $("#mobileMoreButton").removeAttribute("aria-current");
+}
+
+function activateTab(name, {updateHistory=true, restoreScroll=true} = {}) {
+  const targetView = document.getElementById(name);
+  const targetTab = $(`.tab[data-tab="${CSS.escape(name)}"]`);
+  if (!targetView || !targetTab) return false;
+
+  if (activeTabName === name) {
+    syncMobileNavigation(name);
+    if (restoreScroll) window.scrollTo({top:0, behavior:"auto"});
+    return true;
+  }
+
+  tabScrollPositions.set(activeTabName, window.scrollY);
   $$('.tab').forEach(x=>{
-    const active = x === btn;
+    const active = x.dataset.tab === name;
     x.classList.toggle('active', active);
     x.setAttribute('aria-selected', String(active));
     x.tabIndex = active ? 0 : -1;
   });
-  $$('.view').forEach(v=>v.classList.toggle('active',v.id===btn.dataset.tab));
-  history.replaceState(null, "", `#${btn.dataset.tab}`);
-  if (btn.dataset.tab === "reference" && model) renderReference(true);
-});
+  $$('.view').forEach(v=>v.classList.toggle('active',v.id===name));
+  activeTabName = name;
+  syncMobileNavigation(name);
+  if (updateHistory) history.replaceState(null, "", `#${name}`);
+  if (name === "reference" && model) renderReference(true);
+
+  if (restoreScroll) {
+    requestAnimationFrame(() => window.scrollTo({top:tabScrollPositions.get(name) || 0, behavior:"auto"}));
+  }
+  return true;
+}
+
+$$('.tab').forEach(btn => btn.onclick = () => activateTab(btn.dataset.tab));
 
 function activateInitialTab() {
   const wanted = location.hash.replace(/^#/, "");
-  const btn = wanted ? $(`.tab[data-tab="${CSS.escape(wanted)}"]`) : null;
-  if (btn) btn.click();
+  if (wanted && activateTab(wanted, {updateHistory:false, restoreScroll:false})) return;
+  syncMobileNavigation(activeTabName);
 }
 
 $(".tabs").addEventListener("keydown", e => {
@@ -927,8 +967,43 @@ $(".tabs").addEventListener("keydown", e => {
   if (e.key === "Home") next = 0;
   if (e.key === "End") next = tabs.length - 1;
   tabs[next].focus();
-  tabs[next].click();
+  activateTab(tabs[next].dataset.tab);
 });
+
+$$('[data-mobile-tab]').forEach(button => button.addEventListener("click", () => {
+  const name = button.dataset.mobileTab;
+  if (!name) return;
+  activateTab(name);
+  if ($("#mobileMoreDialog").open) $("#mobileMoreDialog").close();
+}));
+
+$("#mobileMoreButton").addEventListener("click", () => {
+  if (!$("#mobileMoreDialog").open) $("#mobileMoreDialog").showModal();
+});
+$("#closeMobileMore").addEventListener("click", () => $("#mobileMoreDialog").close());
+$("#mobileMoreDialog").addEventListener("click", e => {
+  if (e.target === $("#mobileMoreDialog")) $("#mobileMoreDialog").close();
+});
+
+function syncMobileViewport() {
+  const vv = window.visualViewport;
+  if (!vv || !window.matchMedia("(max-width: 620px)").matches) {
+    document.documentElement.style.setProperty("--keyboard-inset", "0px");
+    return;
+  }
+  const gap = Math.max(0, window.innerHeight - vv.height - vv.offsetTop);
+  const keyboardInset = gap > 140 ? Math.round(gap) : 0;
+  document.documentElement.style.setProperty("--keyboard-inset", `${keyboardInset}px`);
+}
+window.visualViewport?.addEventListener("resize", syncMobileViewport);
+window.visualViewport?.addEventListener("scroll", syncMobileViewport);
+window.addEventListener("resize", syncMobileViewport);
+const mobileLayoutQuery = window.matchMedia("(max-width: 620px)");
+mobileLayoutQuery.addEventListener?.("change", e => {
+  syncMobileViewport();
+  if (!e.matches && $("#mobileMoreDialog").open) $("#mobileMoreDialog").close();
+});
+syncMobileViewport();
 
 
 // Event delegation for dynamically-rendered cards and inventory rows.

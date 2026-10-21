@@ -2,11 +2,11 @@
 <html lang="en">
 <head>
   <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
   <meta name="theme-color" content="#0a0910" />
   <meta name="color-scheme" content="dark" />
   <title>Noctis — Necromancer's Grimoire</title>
-  <link rel="stylesheet" href="/styles.css?v=10.0" />
+  <link rel="stylesheet" href="/styles.css?v=11.0" />
 </head>
 <body>
   <div class="ambient ambient-a"></div>
@@ -76,6 +76,14 @@
         <button class="tab" role="tab" aria-label="Settings" title="Settings" aria-controls="settings" data-tab="settings"><span class="tab-icon">⚙</span><span>Settings</span></button>
       </nav>
     </header>
+
+    <nav id="mobileNav" class="mobile-nav" aria-label="Primary mobile navigation">
+      <button class="mobile-nav-button active" type="button" data-mobile-tab="character" aria-label="Character" aria-current="page"><span aria-hidden="true">♥</span><small>Character</small></button>
+      <button class="mobile-nav-button" type="button" data-mobile-tab="play" aria-label="Spells"><span aria-hidden="true">✦</span><small>Spells</small></button>
+      <button class="mobile-nav-button" type="button" data-mobile-tab="inventory" aria-label="Inventory"><span aria-hidden="true">◇</span><small>Inventory</small></button>
+      <button class="mobile-nav-button" type="button" data-mobile-tab="reference" aria-label="Reference"><span aria-hidden="true">⌕</span><small>Reference</small></button>
+      <button id="mobileMoreButton" class="mobile-nav-button" type="button" aria-label="More sections" aria-haspopup="dialog" aria-controls="mobileMoreDialog"><span aria-hidden="true">•••</span><small>More</small></button>
+    </nav>
 
     <main class="content-shell">
       <section id="character" class="view active" role="tabpanel">
@@ -451,6 +459,21 @@
     </main>
   </div>
 
+  <dialog id="mobileMoreDialog" class="mobile-more-dialog" aria-labelledby="mobileMoreTitle">
+    <div class="mobile-more-handle" aria-hidden="true"></div>
+    <div class="mobile-more-heading">
+      <div><div class="eyebrow">NAVIGATION</div><h2 id="mobileMoreTitle">More</h2></div>
+      <button id="closeMobileMore" class="dialog-close mobile-more-close" type="button" aria-label="Close navigation">×</button>
+    </div>
+    <div class="mobile-more-grid">
+      <button type="button" data-mobile-tab="spellbook"><span aria-hidden="true">▤</span><b>Spellbook</b><small>Known & prepared spells</small></button>
+      <button type="button" data-mobile-tab="discover"><span aria-hidden="true">＋</span><b>Learn Spells</b><small>Browse Wizard options</small></button>
+      <button type="button" data-mobile-tab="feats"><span aria-hidden="true">◆</span><b>Feats</b><small>Chosen & available feats</small></button>
+      <button type="button" data-mobile-tab="levelup"><span aria-hidden="true">↑</span><b>Level Up</b><small>Guided advancement</small></button>
+      <button type="button" data-mobile-tab="settings"><span aria-hidden="true">⚙</span><b>Settings</b><small>Overrides & sheet tools</small></button>
+    </div>
+  </dialog>
+
   <dialog id="spellDialog" class="modal-card">
     <button id="closeDialog" class="dialog-close" aria-label="Close">×</button>
     <div id="spellDetail"></div>
@@ -469,6 +492,6 @@
   </dialog>
 
   <div id="toast" class="toast" role="status" aria-live="polite"></div>
-  <script src="/app.js?v=10.0" defer></script>
+  <script src="/app.js?v=11.0" defer></script>
 </body>
 </html>
